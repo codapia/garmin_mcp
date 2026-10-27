@@ -23,8 +23,6 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Render Compose without real credentials
         env:
-          GARMIN_DATA_DIR: /srv/garmin-mcp/data
-          GARMIN_LOCAL_PORT: "18080"
           GARMIN_MCP_HTTP_TOKEN: test-token-only-for-compose-validation
         run: |
           docker compose -f docker-compose.codapia.yml config --format json > rendered.json
@@ -37,6 +35,9 @@ jobs:
           assert "ALL" in s["cap_drop"]
           assert "no-new-privileges:true" in s["security_opt"]
           assert s["ports"] and all(p.get("host_ip") == "127.0.0.1" for p in s["ports"])
+          assert s["ports"][0]["published"] == "18080"
+          assert s["volumes"][0]["source"] == "/srv/garmin-mcp/data"
+          assert s["volumes"][0]["target"] == "/data"
           assert s["environment"]["GARMIN_MCP_TRANSPORT"] == "streamable-http"
           assert s["environment"]["GARMIN_MCP_STATELESS_HTTP"] == "true"
           assert s["environment"]["GARMIN_MCP_HTTP_TOKEN"] == "test-token-only-for-compose-validation"
