@@ -9,14 +9,26 @@ dist/
 build/
 *.egg
 
-# Virtual environments
+# Virtual environments / local files
 .env
+.env.*
+*.env
+!.env.codapia.example
 .venv/
 .uv-cache/
 *.log
 .DS_Store
 .claude.md
 .mcp.json
+
+# Garmin credentials: never commit Garmin OAuth bearer/refresh tokens
+.garminconnect/
+.garminconnect_base64
+garmin_tokens.json
+garmin-data/
+secrets/
+
+# Existing upstream local paths
 docs/*
 .gitignore
 playground/*

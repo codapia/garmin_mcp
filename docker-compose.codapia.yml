@@ -1,0 +1,52 @@
+# Codapia: isolated Garmin MCP HTTP origin, protected by Bearer.
+# Deploy this file as the Docker Compose build pack in Coolify / VPS 1.
+# The host port is bound ONLY to 127.0.0.1; never change it to 0.0.0.0.
+services:
+  garmin-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: "1.0"
+    environment:
+      HOME: /data
+      XDG_CACHE_HOME: /tmp/.cache
+      GARMINTOKENS: /data/.garminconnect
+      GARMINTOKENS_BASE64: /data/.garminconnect_base64
+      GARMIN_MCP_TRANSPORT: streamable-http
+      GARMIN_MCP_HOST: 0.0.0.0
+      GARMIN_MCP_PORT: "8000"
+      GARMIN_MCP_STATELESS_HTTP: "true"
+      GARMIN_MCP_HTTP_TOKEN: "${GARMIN_MCP_HTTP_TOKEN:?Provide a randomly generated secret in Coolify}"
+      # minimal is read-only; the explicit additions permit workout creation
+      # and scheduling but do not permit deletions or unscheduling.
+      GARMIN_TOOL_PROFILE: minimal
+      GARMIN_ENABLED_TOOLS: "get_workouts,get_workout_by_id,get_scheduled_workouts,get_calendar_events,get_training_plan_workouts,get_garmin_coach_workouts,create_strength_workout,create_run_workout,create_run_interval_workout,create_walk_run_workout,create_z2_walk_workout,upload_workout,upload_workouts,schedule_workout,schedule_workouts,schedule_week"
+      GARMIN_DISABLED_TOOLS: "delete_workout,delete_workouts,delete_activity,delete_course,unschedule_workout,unschedule_workouts"
+    volumes:
+      - "${GARMIN_DATA_DIR:?Configure the absolute host data directory}:/data:rw"
+    # Access only from a cloudflared daemon running on THIS host, or via SSH.
+    # For cloudflared in another container, use a private Docker network instead.
+    ports:
+      - "127.0.0.1:${GARMIN_LOCAL_PORT:-18080}:8000"
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s

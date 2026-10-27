@@ -1,0 +1,52 @@
+name: Codapia Garmin deployment validation
+on:
+  push:
+    branches: [main]
+    paths:
+      - docker-compose.codapia.yml
+      - .env.codapia.example
+      - .gitignore
+      - .github/workflows/codapia-compose.yml
+  pull_request:
+    paths:
+      - docker-compose.codapia.yml
+      - .env.codapia.example
+      - .gitignore
+      - .github/workflows/codapia-compose.yml
+permissions:
+  contents: read
+jobs:
+  validate-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Render Compose without real credentials
+        env:
+          GARMIN_DATA_DIR: /srv/garmin-mcp/data
+          GARMIN_LOCAL_PORT: "18080"
+          GARMIN_MCP_HTTP_TOKEN: test-token-only-for-compose-validation
+        run: |
+          docker compose -f docker-compose.codapia.yml config --format json > rendered.json
+          python3 - <<'PY'
+          import json
+          with open("rendered.json", encoding="utf-8") as fh:
+              s = json.load(fh)["services"]["garmin-mcp"]
+          assert s["user"] == "10001:10001"
+          assert s["read_only"] is True
+          assert "ALL" in s["cap_drop"]
+          assert "no-new-privileges:true" in s["security_opt"]
+          assert s["ports"] and all(p.get("host_ip") == "127.0.0.1" for p in s["ports"])
+          assert s["environment"]["GARMIN_MCP_TRANSPORT"] == "streamable-http"
+          assert s["environment"]["GARMIN_MCP_STATELESS_HTTP"] == "true"
+          assert s["environment"]["GARMIN_MCP_HTTP_TOKEN"] == "test-token-only-for-compose-validation"
+          assert s["environment"]["GARMIN_TOOL_PROFILE"] == "minimal"
+          assert s["environment"]["GARMINTOKENS"] == "/data/.garminconnect"
+          allow = set(s["environment"]["GARMIN_ENABLED_TOOLS"].split(","))
+          deny = set(s["environment"]["GARMIN_DISABLED_TOOLS"].split(","))
+          assert {"create_strength_workout", "create_run_workout", "upload_workout", "schedule_workout"}.issubset(allow)
+          assert not allow.intersection(deny)
+          assert {"delete_workout", "delete_workouts", "delete_activity"}.issubset(deny)
+          assert not {"GARMIN_EMAIL", "GARMIN_PASSWORD"}.intersection(s["environment"])
+          print("Compose boundaries and workout tools verified (no real secrets).")
+          PY
