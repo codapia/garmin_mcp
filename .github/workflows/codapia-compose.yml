@@ -41,13 +41,11 @@ jobs:
           assert s["environment"]["GARMIN_MCP_TRANSPORT"] == "streamable-http"
           assert s["environment"]["GARMIN_MCP_STATELESS_HTTP"] == "true"
           assert s["environment"]["GARMIN_MCP_HTTP_TOKEN"] == "test-token-only-for-compose-validation"
-          assert s["environment"]["GARMIN_TOOL_PROFILE"] == "minimal"
+          assert s["environment"]["GARMIN_TOOL_PROFILE"] == "all"
           assert s["environment"]["GARMINTOKENS"] == "/data/.garminconnect"
-          allow = set(s["environment"]["GARMIN_ENABLED_TOOLS"].split(","))
-          deny = set(s["environment"]["GARMIN_DISABLED_TOOLS"].split(","))
-          assert {"create_strength_workout", "create_run_workout", "upload_workout", "schedule_workout"}.issubset(allow)
-          assert not allow.intersection(deny)
-          assert {"delete_workout", "delete_workouts", "delete_activity"}.issubset(deny)
+          # Full profile must not be inadvertently narrowed by a stale allow/deny list.
+          assert "GARMIN_ENABLED_TOOLS" not in s["environment"]
+          assert "GARMIN_DISABLED_TOOLS" not in s["environment"]
           assert not {"GARMIN_EMAIL", "GARMIN_PASSWORD"}.intersection(s["environment"])
-          print("Compose boundaries and workout tools verified (no real secrets).")
+          print("Full Garmin tool profile and Compose security boundaries verified (no real secrets).")
           PY
