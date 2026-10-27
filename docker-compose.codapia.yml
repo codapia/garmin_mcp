@@ -27,11 +27,12 @@ services:
       GARMIN_MCP_PORT: "8000"
       GARMIN_MCP_STATELESS_HTTP: "true"
       GARMIN_MCP_HTTP_TOKEN: "${GARMIN_MCP_HTTP_TOKEN:?Provide a randomly generated secret in Coolify}"
-      # minimal is read-only; the explicit additions permit workout creation
-      # and scheduling but do not permit deletions or unscheduling.
-      GARMIN_TOOL_PROFILE: minimal
-      GARMIN_ENABLED_TOOLS: "get_workouts,get_workout_by_id,get_scheduled_workouts,get_calendar_events,get_training_plan_workouts,get_garmin_coach_workouts,create_strength_workout,create_run_workout,create_run_interval_workout,create_walk_run_workout,create_z2_walk_workout,upload_workout,upload_workouts,schedule_workout,schedule_workouts,schedule_week"
-      GARMIN_DISABLED_TOOLS: "delete_workout,delete_workouts,delete_activity,delete_course,unschedule_workout,unschedule_workouts"
+      # Full Garmin MCP catalog (including write/destructive operations).
+      # This is intentional and MUST remain behind Cloudflare OAuth + Bearer auth.
+      # No GARMIN_ENABLED_TOOLS allowlist or GARMIN_DISABLED_TOOLS denylist:
+      # either would restrict the tools exposed by the "all" profile.
+      # Review docs/GARMIN_MCP_FULL_ACCESS.md before enabling in production.
+      GARMIN_TOOL_PROFILE: all
     volumes:
       # Coolify rejects ${...} in volume sources; use this pre-created host path.
       - /srv/garmin-mcp/data:/data:rw
