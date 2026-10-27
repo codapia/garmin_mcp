@@ -97,7 +97,7 @@
     },
     {
       "name": "create_manual_activity",
-      "description": "Log a manual activity in Garmin Connect \u2014 useful for activities done without a watch."
+      "description": "Log a manual activity in Garmin Connect — useful for activities done without a watch."
     },
     {
       "name": "create_run_interval_workout",
@@ -324,6 +324,10 @@
       "description": "Estimate a composition-derived TDEE from logged intake, Garmin's"
     },
     {
+      "name": "get_exercise_details",
+      "description": "Obtener identificador, músculos y equipamiento de un ejercicio Garmin."
+    },
+    {
       "name": "get_fitnessage_data",
       "description": "Get fitness age data"
     },
@@ -521,7 +525,7 @@
     },
     {
       "name": "get_training_load_balance",
-      "description": "Get Garmin's Load Focus \u2014 the distribution of the trailing-month"
+      "description": "Get Garmin's Load Focus — the distribution of the trailing-month"
     },
     {
       "name": "get_training_load_trend",
@@ -620,6 +624,10 @@
       "description": "Schedule multiple workouts to specific calendar dates"
     },
     {
+      "name": "search_exercises",
+      "description": "Buscar ejercicios oficiales Garmin en español o inglés, con filtros."
+    },
+    {
       "name": "search_foods",
       "description": "Search Garmin's general food catalog (FatSecret + Garmin custom foods)"
     },
@@ -694,6 +702,10 @@
     {
       "name": "upsert_and_log",
       "description": "Find-or-create a custom food then log it in one step"
+    },
+    {
+      "name": "validate_strength_exercises",
+      "description": "Validar códigos Garmin y series/repeticiones antes de crear una rutina."
     }
   ],
   "compatibility": {

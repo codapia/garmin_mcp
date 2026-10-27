@@ -1,6 +1,6 @@
 """Built-in tool profiles for GARMIN_TOOL_PROFILE.
 
-The server registers 155 tools. A profile narrows that to one area so an LLM
+The server registers Garmin Connect tools. A profile narrows that to one area so an LLM
 client carries less context, without the user having to list tool names in
 GARMIN_ENABLED_TOOLS. Each profile is a set of registered tool names; a unit
 test checks every name here against the tools the modules actually register,
@@ -166,6 +166,10 @@ WORKOUTS_TOOLS = CORE_TOOLS | frozenset(
         "create_walk_run_workout",
         "create_z2_walk_workout",
         "schedule_week",
+        # catalog (public read-only Garmin reference data)
+        "search_exercises",
+        "get_exercise_details",
+        "validate_strength_exercises",
         # calendar_events
         "get_calendar_events",
     }

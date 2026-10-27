@@ -30,6 +30,7 @@ from garmin_mcp import (
     weight_management,
     womens_health,
     workout_builders,
+    exercise_catalog,
     workouts,
 )
 
@@ -49,6 +50,7 @@ MODULES = [
     womens_health,
     nutrition,
     workout_builders,
+    exercise_catalog,
     courses,
     activity_analysis,
     calendar_events,
