@@ -30,12 +30,11 @@ Esperado: `10001:10001 700 /srv/garmin-mcp/data`. No guardar archivos OAuth ni c
 
 ## 2. Crear la aplicación en Coolify
 
+**Compatibilidad con Coolify v4.4.7:** la carga del Compose rechaza orígenes de volúmenes con interpolación `${GARMIN_DATA_DIR:?…}` como `Invalid Docker volume definition: Invalid volume source: contains forbidden character`. Por eso `/srv/garmin-mcp/data:/data:rw` es una ruta absoluta literal y ya se creó con propietario `10001:10001`, permisos `0700`. No añadir `GARMIN_DATA_DIR` ni `GARMIN_LOCAL_PORT` como variables: no se usan.
+
 1. En VPS 1, crear un recurso nuevo **Docker Compose** desde `https://github.com/codapia/garmin_mcp`.
 2. Seleccionar rama `main` y especificar **`/docker-compose.codapia.yml`** como Compose file (o su ruta equivalente en la versión de Coolify).
-3. En **Environment Variables** introducir:
-   - `GARMIN_DATA_DIR=/srv/garmin-mcp/data`
-   - `GARMIN_LOCAL_PORT=18080` (cambiar si está ocupado)
-   - `GARMIN_MCP_HTTP_TOKEN` con 32 bytes aleatorios, por ejemplo el resultado de `openssl rand -hex 32`. **No copiar el valor a documentación ni al repositorio**.
+3. En **Environment Variables** introducir **solo** `GARMIN_MCP_HTTP_TOKEN`, con 32 bytes aleatorios, por ejemplo el resultado de `openssl rand -hex 32`. **No copiar el valor a documentación ni al repositorio**. La ruta `/srv/garmin-mcp/data` y el puerto local `18080` están definidos literalmente en el archivo Compose, para evitar el error de validación de Coolify con variables `${...}` en los orígenes de volúmenes. Si el puerto está ocupado, modificarlo en GitHub y volver a cargar el Compose.
 4. Configurar la aplicación sin dominio público asignado en Coolify, sin publicación directa de puertos externos y **sin** variables `GARMIN_EMAIL` ni `GARMIN_PASSWORD` persistentes.
 5. Ejecutar **Deploy**. El Compose monta `/data`, ejecuta UID `10001`, elimina capacidades y deja el filesystem base de solo lectura. El host solo escucha `127.0.0.1:18080`.
 
