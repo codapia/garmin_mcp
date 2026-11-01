@@ -47,6 +47,9 @@ jobs:
       - name: Install
         working-directory: apps/fitness-web
         run: npm install --no-audit --no-fund
+      - name: Test canonical browser origin
+        working-directory: apps/fitness-web
+        run: npm run test:origin
       - name: Typecheck
         working-directory: apps/fitness-web
         run: npm run typecheck
