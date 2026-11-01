@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Activity, CalendarDays, CheckCircle2, Dumbbell, HeartPulse, Moon, RefreshCcw, Search, Utensils, ShieldCheck, TrendingUp, AlertTriangle } from "lucide-react";
 import { DatePickerBar, MealGroups, MealWeekGrid, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
-import { ExerciseDemo } from "./exercise-demo";
+import { ExerciseDemo, EXERCISE_DEMO_LIBRARY, hasExerciseDemo } from "./exercise-demo";
+import { ExerciseLoad, WorkoutWeekGrid, loadDisplay, type WorkoutPlan } from "./workout-week";
 
 type Tab="home"|"workout"|"food"|"history"|"progress"|"catalog";
 type Day={
@@ -12,7 +13,7 @@ type Day={
   sync_warnings:string[];synced_at:string;
 };
 type Meal={id:string;date:string;meal_type:string;description:string;calories:number|null;protein_g:number|null;calories_estimated:boolean;protein_estimated:boolean;portions:unknown;notes?:string};
-type Plan={id:string;date:string;title:string;steps:Record<string,unknown>[];version:number;garmin_workout_id:string|null};
+type Plan=WorkoutPlan;
 type Timeline={mode:"live";days:Day[];meals:Meal[];plans:Plan[]};
 type CatalogExercise={category:string;exercise_name:string;name_en:string;name_es:string|null;primary_muscles:string[];equipment:string[]};
 const getNum=(v:unknown):number|null=>typeof v==="number"&&Number.isFinite(v)?v:null;
@@ -83,6 +84,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   const [catalog,setCatalog]=useState<CatalogExercise[]>([]);
   const [total,setTotal]=useState(0);
   const [catalogError,setCatalogError]=useState("");
+  const [demoOnly,setDemoOnly]=useState(true);
   async function load(){
     setLoading(true);
     try{
@@ -94,7 +96,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   }
   useEffect(()=>{void load();},[]);
   useEffect(()=>{
-    if(tab!=="catalog")return;
+    if(tab!=="catalog"||demoOnly)return;
     const controller=new AbortController();
     const timer=setTimeout(async()=>{
       try{
@@ -105,15 +107,24 @@ export default function LivePortal({tab}:{tab:Tab}){
       }catch(e){if(!controller.signal.aborted)setCatalogError(e instanceof Error?e.message:"Error");}
     },280);
     return ()=>{clearTimeout(timer);controller.abort();};
-  },[tab,query,category,muscle,equipment]);
+  },[tab,query,category,muscle,equipment,demoOnly]);
   const byDay=useMemo(()=>new Map((data?.days||[]).map(d=>[d.date,d])),[data]);
   const chosen=byDay.get(date);
   const activeDates=periodDates(date,period);
   const activeSet=new Set(activeDates);
   const todaysPlans=(data?.plans||[]).filter(p=>activeSet.has(p.date));
+  const displayedPlans=period==="week"?todaysPlans.filter(p=>p.date===date):todaysPlans;
   const todaysMeals=(data?.meals||[]).filter(m=>activeSet.has(m.date));
   const allDates=Array.from(new Set([...(data?.days||[]).map(d=>d.date),...(data?.meals||[]).map(m=>m.date),...(data?.plans||[]).map(p=>p.date)])).sort().reverse();
   const days=data?.days||[];
+  const visibleDemoExercises=EXERCISE_DEMO_LIBRARY.filter(e=>{
+    const q=query.trim().toLowerCase();
+    return (!q||[e.name_es,e.name_en,e.category,e.exercise_name].some(v=>v.toLowerCase().includes(q)))&&
+      (!category||e.category.toLowerCase().includes(category.toLowerCase()))&&
+      (!muscle||e.primary_muscles.some(v=>v.toLowerCase().includes(muscle.toLowerCase())))&&
+      (!equipment||e.equipment.some(v=>v.toLowerCase().includes(equipment.toLowerCase())));
+  });
+  const shownCatalog:CatalogExercise[]=demoOnly?visibleDemoExercises:[...catalog].sort((a,b)=>Number(hasExerciseDemo(b.category,b.exercise_name))-Number(hasExerciseDemo(a.category,a.exercise_name)));
   const periodCaption=period==="day"?"Día "+longDate(date):"Semana "+longDate(activeDates[0])+" al "+longDate(activeDates[6]);
   const imported=(p:Plan)=>p.steps.some(step=>Boolean(step.source_garmin_workout_id));
   const alreadyInGarmin=(p:Plan)=>Boolean(p.garmin_workout_id)||imported(p);
@@ -171,10 +182,12 @@ export default function LivePortal({tab}:{tab:Tab}){
       </div>
     </>}
     {tab==="workout"&&<>
-      <p className="muted">{periodCaption}</p>
-      {!todaysPlans.length&&<div className="panel"><p>Sin rutina web guardada para este día. Puedes pedirme por ChatGPT que cree una y la guarde aquí. La programación en Garmin es un paso separado.</p></div>}
+      <p className="muted">{periodCaption}{period==="week"?" · Selecciona un día del calendario para consultar sus ejercicios.":""}</p>
+      {period==="week"&&<WorkoutWeekGrid plans={todaysPlans} dates={activeDates} selectedDate={date} onSelectDay={setDate}/>}
+      <div className="meal-day-heading workout-detail-heading"><h2><Dumbbell size={20}/>{period==="week"?"Detalle del "+longDate(date):"Detalle del día"}</h2><span>{displayedPlans.length} rutinas</span></div>
+      {!displayedPlans.length&&<div className="panel"><p>No hay rutinas guardadas en Fitness para el día seleccionado. Una casilla vacía no confirma descanso.</p></div>}
       {sendMessage&&<div className="panel" role="status"><p>{sendMessage}</p></div>}
-      {todaysPlans.map(p=><div className="panel" key={p.id}>
+      {displayedPlans.map(p=><div className="panel" key={p.id}>
         <div className="panel-heading"><h2><Dumbbell size={19}/> {p.title}</h2></div>
         <p className="muted">{longDate(p.date)} · {p.steps.length} pasos · {alreadyInGarmin(p)?"Rutina existente en Garmin":"Guardada solamente en Fitness"}</p>
         <button className="neon-button" disabled={sendingPlan!==null||!canSend(p)} onClick={()=>void sendToGarmin(p)}>
@@ -184,14 +197,15 @@ export default function LivePortal({tab}:{tab:Tab}){
         {imported(p)&&<p className="muted">Esta rutina fue importada desde Garmin: se conserva únicamente para consulta y no se puede reenviar para evitar duplicados.</p>}
         {!alreadyInGarmin(p)&&!canSend(p)&&<p className="muted">Esta rutina aún no contiene todos los códigos y repeticiones oficiales necesarios para enviarla.</p>}
       </div>)}
-      <div className="exercise-grid">{todaysPlans.flatMap(p=>p.steps.map((s,i)=>({p,s,i}))).map(({p,s,i})=>
+      <div className="exercise-grid">{displayedPlans.flatMap(p=>p.steps.map((s,i)=>({p,s,i}))).map(({p,s,i})=>
         <article className="exercise-card panel" key={p.id+"-"+i}><span className="eyebrow">{p.title} · EJERCICIO {i+1}</span><h3>{value(s.name)}</h3>
           <ExerciseDemo
             category={s.category??s.source_garmin_category}
             exerciseName={s.exercise_name??s.source_garmin_exercise_name}
             label={value(s.name)}
           />
-          <div className="workout-numbers"><div><span>Series</span><strong>{value(s.sets??s.series)}</strong></div><div><span>Reps</span><strong>{value(s.reps)}</strong></div><div><span>Carga</span><strong>{value(s.weight??s.load)}</strong></div><div><span>Descanso</span><strong>{value(s.rest_seconds??s.rest)}</strong></div></div>
+          <div className="workout-numbers"><div><span>Series</span><strong>{value(s.sets??s.series)}</strong></div><div><span>Reps</span><strong>{value(s.reps)}</strong></div><div><span>Carga</span><strong>{loadDisplay(s).label}</strong></div><div><span>Descanso</span><strong>{value(s.rest_seconds??s.rest)}</strong></div></div>
+          <ExerciseLoad key={p.id+"-"+i+"-"+p.version} plan={p} step={s} index={i} onSaved={load}/>
           <div className="guide-grid"><div><h4><CheckCircle2 size={17}/> Cómo hacerlo</h4><p>{value(s.instructions??s.technique)}</p></div><div><h4 className="warning"><AlertTriangle size={17}/> Errores frecuentes</h4><p>{value(s.mistakes)}</p></div></div>
           <div className="safety"><ShieldCheck size={17}/> {value(s.safety??"Precauciones técnicas aún no registradas para este movimiento.")}</div>
 
@@ -224,8 +238,8 @@ export default function LivePortal({tab}:{tab:Tab}){
       <TrendExplorer days={days} meals={data?.meals||[]} date={date}/>
     </>}
     {tab==="catalog"&&<>
-      <div className="panel catalog-controls"><div className="search-input"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar nombre Garmin o español…"/></div><div className="filter-grid"><label>Categoría<input placeholder="Ej. BENCH_PRESS" value={category} onChange={e=>setCategory(e.target.value)}/></label><label>Músculo<input placeholder="Ej. CHEST" value={muscle} onChange={e=>setMuscle(e.target.value)}/></label><label>Equipamiento<input placeholder="Ej. DUMBBELL" value={equipment} onChange={e=>setEquipment(e.target.value)}/></label></div><p className="muted">{catalogError||total+" coincidencias Garmin; mostrando "+catalog.length+". Búsqueda dinámica."}</p></div>
-      <div className="catalog-grid">{catalog.map(e=><div className="panel catalog-card" key={e.category+"/"+e.exercise_name}><span className="chip lime">{e.category}</span><h3>{e.name_es||e.name_en}</h3><p className="muted">{e.name_en}</p><ExerciseDemo category={e.category} exerciseName={e.exercise_name} label={e.name_es||e.name_en}/><p>{e.primary_muscles.join(", ")||"Músculo no especificado"}</p><p className="muted">{e.equipment.join(", ")||"Equipo no especificado"}</p><span className="chip">{e.exercise_name}</span></div>)}</div>
+      <div className="panel catalog-controls"><div className="catalog-demo-switch" role="group" aria-label="Disponibilidad de animaciones"><button type="button" className={demoOnly?"active":""} aria-pressed={demoOnly} onClick={()=>setDemoOnly(true)}>Con animación ({EXERCISE_DEMO_LIBRARY.length})</button><button type="button" className={!demoOnly?"active":""} aria-pressed={!demoOnly} onClick={()=>setDemoOnly(false)}>Todos los ejercicios</button></div><div className="search-input"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar nombre Garmin o español…"/></div><div className="filter-grid"><label>Categoría<input placeholder="Ej. BENCH_PRESS" value={category} onChange={e=>setCategory(e.target.value)}/></label><label>Músculo<input placeholder="Ej. CHEST" value={muscle} onChange={e=>setMuscle(e.target.value)}/></label><label>Equipamiento<input placeholder="Ej. DUMBBELL" value={equipment} onChange={e=>setEquipment(e.target.value)}/></label></div><p className="muted">{demoOnly?"Mostrando "+visibleDemoExercises.length+" de "+EXERCISE_DEMO_LIBRARY.length+" demostraciones disponibles. El resto del catálogo aún no tiene animación específica.":catalogError||total+" coincidencias Garmin; mostrando "+catalog.length+" (primero los disponibles con animación)."}</p></div>
+      <div className="catalog-grid">{shownCatalog.map(e=><div className="panel catalog-card" key={e.category+"/"+e.exercise_name}><span className="chip lime">{e.category}</span><h3>{e.name_es||e.name_en}</h3><p className="muted">{e.name_en}</p><ExerciseDemo category={e.category} exerciseName={e.exercise_name} label={e.name_es||e.name_en}/><p>{e.primary_muscles.join(", ")||"Músculo no especificado"}</p><p className="muted">{e.equipment.join(", ")||"Equipo no especificado"}</p><span className="chip">{e.exercise_name}</span></div>)}</div>
     </>}
   </div>;
 }
