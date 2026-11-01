@@ -79,3 +79,36 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 @media(max-width:1150px){.trend-layout{grid-template-columns:200px minmax(0,1fr)}.meal-slots{grid-template-columns:repeat(2,minmax(0,1fr))}.meal-slot:last-child{grid-column:auto}.weekly-overview{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:800px){.trend-layout{grid-template-columns:1fr}.trend-sidebar{max-height:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.trend-sidebar>p{grid-column:1/-1}.period-header{align-items:stretch}.period-nav{justify-content:space-between}.period-nav span{font-size:12px}.meal-slots{grid-template-columns:1fr}.weekly-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.insight-heading h2{font-size:21px}}
 @media(max-width:420px){.trend-sidebar{grid-template-columns:1fr}.toolbar-top{align-items:stretch}.toolbar-top label,.toolbar-top input{width:100%}.toolbar-top .neon-button{width:100%}.period-nav span{font-size:11px}.meal-day-heading h2{font-size:17px}}
+
+/* Day-by-day controls and seven-column meal planner */
+.day-stepper{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:13px;flex-wrap:wrap;border-top:1px solid #364637;padding-top:13px}
+.day-stepper button{display:inline-flex;align-items:center;justify-content:center;gap:5px;background:#263927;border:1px solid #4d6549;border-radius:10px;color:#e0f3d6;font-size:12px;font-weight:750;padding:10px 13px}
+.day-stepper button:hover,.day-stepper button:focus-visible{border-color:var(--lime);color:var(--lime)}
+.day-stepper span{color:#b5c9b0;font-size:12px;text-align:center}
+.day-stepper strong{color:var(--ink);text-transform:capitalize}
+.meal-week-section{overflow:hidden}
+.meal-week-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;border:1px solid #344934;border-radius:16px;background:#172019}
+.meal-week-scroll:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.meal-week-grid{--meal-label-width:118px;--meal-day-width:162px;display:grid;grid-template-columns:var(--meal-label-width) repeat(7,minmax(var(--meal-day-width),1fr));min-width:1252px}
+.week-corner,.week-col-heading,.week-row-label,.meal-week-cell{border-right:1px solid #344434;border-bottom:1px solid #344434}
+.week-corner{position:sticky;left:0;z-index:6;display:flex;align-items:center;padding:13px;background:#253527;color:var(--lime);font-weight:800;font-size:12px}
+.week-col-heading{display:flex;flex-direction:column;gap:5px;text-align:center;align-items:center;justify-content:center;border-top:0;border-left:0;background:#263628;color:#e9f2e6;padding:12px 9px}
+.week-col-heading strong{text-transform:capitalize;font-size:14px}
+.week-col-heading span{font-size:11px;color:#a8c1a4}
+.week-col-heading.chosen{background:#3a4f29;border-bottom:3px solid var(--lime)}
+.week-col-heading:hover{background:#345137}
+.meal-week-row{display:grid;grid-column:1/-1;grid-template-columns:var(--meal-label-width) repeat(7,minmax(var(--meal-day-width),1fr))}
+.week-row-label{position:sticky;left:0;z-index:5;background:#263527;padding:18px 12px;display:flex;flex-direction:column;justify-content:flex-start;gap:5px;min-width:0}
+.week-row-label strong{font-size:13px}
+.week-row-label small{color:var(--muted);font-size:10px}
+.meal-week-cell{padding:10px 9px;min-height:112px;min-width:0;background:#1c2a20}
+.meal-week-row:nth-child(2n) .meal-week-cell{background:#1b271d}
+.meal-week-cell.current{background:#273b22!important}
+.week-cell-empty{font-size:16px;color:#617361;display:block;margin:15px 0;text-align:center}
+.meal-entry-compact{border-top:0;border-radius:9px;background:#2c3b2d;padding:10px;margin-bottom:8px}
+.meal-entry-compact p{font-size:11px;line-height:1.45;overflow-wrap:anywhere;margin:0 0 7px}
+.meal-entry-compact .meal-values{gap:5px}
+.meal-entry-compact .meal-values span{font-size:10px;line-height:1.45;background:#3c5038;overflow-wrap:anywhere}
+.trend-feedback{margin:6px 0 12px;min-height:16px}
+.trend-missing{color:#f1c58c;background:#342d20;border:1px solid #675133;padding:9px 13px;border-radius:10px;font-size:12px;margin:8px 0}
+@media(max-width:760px){.meal-week-grid,.meal-week-row{--meal-label-width:94px;--meal-day-width:158px;min-width:1200px}.week-row-label{padding:13px 7px}.week-row-label strong{font-size:11px}.week-row-label small{font-size:9px}.meal-week-section{padding:12px}.day-stepper{gap:6px}.day-stepper button{padding:9px 10px}.day-stepper span{flex:1 0 100%;order:-1}}
