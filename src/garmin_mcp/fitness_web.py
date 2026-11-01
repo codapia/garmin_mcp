@@ -39,6 +39,10 @@ def fitness_request(payload: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError(str(data.get("error", "Respuesta Fitness inválida")))
     return data
 
+def configure(client):
+    """The Fitness bridge does not depend on the Garmin client."""
+    return None
+
 def register_tools(app):
     @app.tool()
     async def fitness_registrar_comida(
