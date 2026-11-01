@@ -106,6 +106,10 @@ def register_tools(app):
         """Crear o actualizar un plan de entrenamiento SOLO EN FITNESS CODAPIA.
 
         Al editar requiere plan_id y expected_version para prevenir sobreescrituras.
+        Para poder enviar el plan al Forerunner, cada paso de fuerza necesita
+        name (texto), category y exercise_name (códigos Garmin oficiales),
+        sets, reps y rest_seconds; opcionalmente weight_kg. Consultar primero
+        search_exercises / validate_strength_exercises.
         NO cambia ni elimina entrenamientos Garmin. Confirma cambios en Garmin aparte.
         """
         payload:dict[str,Any]={"date":_check_date(date),"title":title,"steps":steps}
