@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Activity, CalendarDays, CheckCircle2, Dumbbell, HeartPulse, Moon, RefreshCcw, Search, Utensils, ShieldCheck, TrendingUp, AlertTriangle } from "lucide-react";
-import { crosses } from "./demo-data";
+import { DatePickerBar, MealGroups, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
 
 type Tab="home"|"workout"|"food"|"history"|"progress"|"catalog";
 type Day={
@@ -73,9 +73,8 @@ export default function LivePortal({tab}:{tab:Tab}){
   const [sendingPlan,setSendingPlan]=useState<string|null>(null);
   const [sendMessage,setSendMessage]=useState("");
   const [date,setDate]=useState(chileDay);
+  const [period,setPeriod]=useState<Period>("day");
   const [detail,setDetail]=useState("Resumen");
-  const [cross,setCross]=useState(0);
-  const [count,setCount]=useState(0);
   const [query,setQuery]=useState("");
   const [category,setCategory]=useState("");
   const [muscle,setMuscle]=useState("");
@@ -86,7 +85,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   async function load(){
     setLoading(true);
     try{
-      const r=await fetch("/api/fitness/timeline?start="+offsetDay(-60)+"&end="+offsetDay(30),{cache:"no-store"});
+      const r=await fetch("/api/fitness/timeline?start="+offsetDay(-89)+"&end="+offsetDay(30),{cache:"no-store"});
       const obj=await r.json();if(!r.ok)throw Error(obj.error||"Servicio no disponible");
       setData(obj);setError("");
     }catch(e){setError(e instanceof Error?e.message:"Error de carga");}
@@ -108,10 +107,16 @@ export default function LivePortal({tab}:{tab:Tab}){
   },[tab,query,category,muscle,equipment]);
   const byDay=useMemo(()=>new Map((data?.days||[]).map(d=>[d.date,d])),[data]);
   const chosen=byDay.get(date);
-  const todaysPlans=data?.plans.filter(p=>p.date===date)||[];
-  const todaysMeals=data?.meals.filter(m=>m.date===date)||[];
+  const activeDates=periodDates(date,period);
+  const activeSet=new Set(activeDates);
+  const todaysPlans=(data?.plans||[]).filter(p=>activeSet.has(p.date));
+  const todaysMeals=(data?.meals||[]).filter(m=>activeSet.has(m.date));
   const allDates=Array.from(new Set([...(data?.days||[]).map(d=>d.date),...(data?.meals||[]).map(m=>m.date),...(data?.plans||[]).map(p=>p.date)])).sort().reverse();
   const days=data?.days||[];
+  const periodCaption=period==="day"?"Día "+longDate(date):"Semana "+longDate(activeDates[0])+" al "+longDate(activeDates[6]);
+  const imported=(p:Plan)=>p.steps.some(step=>Boolean(step.source_garmin_workout_id));
+  const alreadyInGarmin=(p:Plan)=>Boolean(p.garmin_workout_id)||imported(p);
+  const canSend=(p:Plan)=>!alreadyInGarmin(p)&&p.steps.every(step=>Boolean(step.category&&step.exercise_name&&step.sets&&step.reps));
   async function sync(){
     setSyncing(true);
     try{
@@ -142,9 +147,17 @@ export default function LivePortal({tab}:{tab:Tab}){
       <p>Garmin es la fuente de las actividades realizadas. Las comidas y los planes se almacenan en tu propia base de datos.</p>
     </div>
     {error&&<div className="demo-banner"><AlertTriangle size={17}/>{error}</div>}
-    {tab!=="catalog"&&<div className="live-toolbar panel"><label>Fecha <input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="neon-button" disabled={syncing} onClick={sync}><RefreshCcw size={17} className={syncing?"spin":""}/>{syncing?"Sincronizando…":"Actualizar Garmin"}</button><span className="muted">Última lectura: {chosen?new Date(chosen.synced_at).toLocaleString("es-CL"):"Sin sincronizar"}</span></div>}
+    {tab!=="catalog"&&<>
+      <div className="live-toolbar panel">
+        <div className="toolbar-top"><label>Fecha de referencia <input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+          <button className="neon-button" disabled={syncing} onClick={sync}><RefreshCcw size={17} className={syncing?"spin":""}/>{syncing?"Sincronizando…":"Actualizar Garmin (día)"}</button></div>
+        <span className="muted">Última lectura del día seleccionado: {chosen?new Date(chosen.synced_at).toLocaleString("es-CL"):"Sin sincronizar"}.</span>
+      </div>
+      {tab!=="progress"&&<DatePickerBar date={date} period={period} onDate={setDate} onPeriod={setPeriod} availableDates={allDates}/>}
+    </>}
     {(chosen?.sync_warnings?.length ?? 0)>0&&<div className="demo-banner"><AlertTriangle size={17}/>Se conservaron los datos disponibles. Algunas métricas no respondieron: {chosen?.sync_warnings?.join("; ")}</div>}
     {tab==="home"&&<>
+      <p className="muted">{periodCaption} · Los indicadores Garmin de esta sección corresponden al día de referencia.</p>
       <div className="metric-grid">
         <Kpi label="Pasos" number={metric(chosen,"pasos")}/>
         <Kpi label="Body Battery" number={metric(chosen,"battery")} unit="/100"/>
@@ -152,24 +165,23 @@ export default function LivePortal({tab}:{tab:Tab}){
         <Kpi label="Estrés medio" number={metric(chosen,"estrés")}/>
       </div>
       <div className="home-grid">
-        <div className="panel"><h2><Dumbbell size={19}/> Rutinas programadas</h2>{todaysPlans.length?todaysPlans.map(p=><p key={p.id}>{p.title} · {p.steps.length} ejercicios · {p.garmin_workout_id?"Vinculada a Garmin #"+p.garmin_workout_id:"Solo en Fitness"}</p>):<p className="muted">No hay rutina guardada en Fitness para este día. Se podrá registrar desde ChatGPT.</p>}</div>
-        <div className="panel"><h2><Utensils size={19}/> Alimentación</h2><p>{todaysMeals.length} comidas registradas.</p><p className="muted">Los totales solo cuentan alimentos con estimación registrada; un día incompleto no es un consumo de 0 kcal.</p></div>
+        <div className="panel"><h2><Dumbbell size={19}/> Rutinas programadas</h2>{todaysPlans.length?todaysPlans.map(p=><p key={p.id}>{longDate(p.date)} · {p.title} · {p.steps.length} ejercicios · {alreadyInGarmin(p)?"Existe en Garmin":"Solo en Fitness"}</p>):<p className="muted">No hay rutina guardada en Fitness para este día. Se podrá registrar desde ChatGPT.</p>}</div>
+        <div className="panel"><h2><Utensils size={19}/> Alimentación</h2><p>{todaysMeals.length} comidas registradas en {period==="week"?"la semana":"el día"}.</p><p className="muted">Los totales solo cuentan alimentos con estimación registrada; un día incompleto no es un consumo de 0 kcal.</p></div>
       </div>
     </>}
     {tab==="workout"&&<>
+      <p className="muted">{periodCaption}</p>
       {!todaysPlans.length&&<div className="panel"><p>Sin rutina web guardada para este día. Puedes pedirme por ChatGPT que cree una y la guarde aquí. La programación en Garmin es un paso separado.</p></div>}
       {sendMessage&&<div className="panel" role="status"><p>{sendMessage}</p></div>}
       {todaysPlans.map(p=><div className="panel" key={p.id}>
         <div className="panel-heading"><h2><Dumbbell size={19}/> {p.title}</h2></div>
-        <p className="muted">{p.steps.length} pasos · {p.garmin_workout_id?"Garmin #"+p.garmin_workout_id:"Guardada solamente en Fitness"}</p>
-        <button className="neon-button" disabled={sendingPlan!==null ||
-          p.steps.some(s=>!s.category||!s.exercise_name||!s.sets||!s.reps)}
-          onClick={()=>void sendToGarmin(p)}>
+        <p className="muted">{longDate(p.date)} · {p.steps.length} pasos · {alreadyInGarmin(p)?"Rutina existente en Garmin":"Guardada solamente en Fitness"}</p>
+        <button className="neon-button" disabled={sendingPlan!==null||!canSend(p)} onClick={()=>void sendToGarmin(p)}>
           <RefreshCcw size={17} className={sendingPlan===p.id?"spin":""}/>
-          {sendingPlan===p.id?"Enviando…":p.garmin_workout_id?"Verificar programación en Garmin":"Enviar a Garmin"}
+          {sendingPlan===p.id?"Enviando…":alreadyInGarmin(p)?"Ya existe en Garmin":"Enviar a Garmin"}
         </button>
-        {p.steps.some(s=>!s.category||!s.exercise_name||!s.sets||!s.reps)&&
-          <p className="muted">Para enviar, cada paso debe incluir category, exercise_name, sets y reps oficiales de Garmin.</p>}
+        {imported(p)&&<p className="muted">Esta rutina fue importada desde Garmin: se conserva únicamente para consulta y no se puede reenviar para evitar duplicados.</p>}
+        {!alreadyInGarmin(p)&&!canSend(p)&&<p className="muted">Esta rutina aún no contiene todos los códigos y repeticiones oficiales necesarios para enviarla.</p>}
       </div>)}
       <div className="exercise-grid">{todaysPlans.flatMap(p=>p.steps.map((s,i)=>({p,s,i}))).map(({p,s,i})=>
         <article className="exercise-card panel" key={p.id+"-"+i}><span className="eyebrow">{p.title} · EJERCICIO {i+1}</span><h3>{value(s.name)}</h3>
@@ -179,21 +191,30 @@ export default function LivePortal({tab}:{tab:Tab}){
           <p className="muted">Demostración técnica por incorporar y validar para este ejercicio Garmin exacto; no se mostrará un GIF genérico engañoso.</p>
         </article>)}</div>
     </>}
-    {tab==="food"&&<div className="food-list">{(data?.meals||[]).map(m=><div className="panel food-day" key={m.id}><div className="panel-heading"><h3>{dateLabel(m.date)} · {m.meal_type}</h3></div><p>{m.description}</p><p className="muted">{m.calories===null?"Calorías sin estimar":fmt(m.calories,1)+" kcal"+(m.calories_estimated?" (estimación)":" (confirmado)")} · {m.protein_g===null?"Proteína sin estimar":fmt(m.protein_g,1)+" g de proteína"+(m.protein_estimated?" (estimación)":" (confirmada)")}</p></div>)}{!data?.meals.length&&<div className="panel">Aún no hay comidas registradas. Puedes enviarlas desde ChatGPT cuando se configure el MCP Fitness.</div>}</div>}
+    {tab==="food"&&<><p className="muted">{periodCaption} · Las comidas se separan según la franja informada, sin inventar horarios.</p>
+      <MealGroups meals={todaysMeals} dates={activeDates}/>
+    </>}
     {tab==="history"&&<>
-      <div className="row-wrap badges">{allDates.slice(0,28).map(d=><button type="button" className={"chip "+(date===d?"lime":"")} key={d} onClick={()=>setDate(d)}>{d.slice(5)}</button>)}</div>
+      <p className="muted">{periodCaption} · Selecciona Día o Semana arriba para cambiar el período.</p>
+      {period==="week"&&<div className="panel history-card"><h2><CalendarDays size={20}/> Resumen de la semana</h2>
+        <div className="weekly-overview">{activeDates.map(d=>{const day=byDay.get(d);const mealCount=(data?.meals||[]).filter(m=>m.date===d).length;
+          const planCount=(data?.plans||[]).filter(p=>p.date===d).length;
+          return <button className={"week-day "+(date===d?"chosen":"")} key={d} type="button" onClick={()=>{setDate(d);setPeriod("day");}}>
+            <strong>{new Date(d+"T12:00:00Z").toLocaleDateString("es-CL",{weekday:"short",day:"numeric"})}</strong>
+            <span>{fmt(metric(day,"pasos"))} pasos</span><span>{fmt(metric(day,"sueño"),1)} h sueño</span>
+            <small>{mealCount} comidas · {planCount} rutinas</small>
+          </button>;})}</div>
+        <p className="muted">Selecciona un día para ver su detalle. Las cifras proceden de la última sincronización de cada fecha.</p>
+      </div>}
       <div className="subtabs history-tabs">{["Resumen","Salud","Ejercicio","Alimentación","Recuperación"].map(k=><button key={k} className={detail===k?"selected":""} onClick={()=>setDetail(k)}>{k}</button>)}</div>
       {(detail==="Resumen"||detail==="Salud")&&<div className="metric-grid"><Kpi label="Pasos" number={metric(chosen,"pasos")}/><Kpi label="Sueño" number={metric(chosen,"sueño")} unit="h"/><Kpi label="Estrés" number={metric(chosen,"estrés")}/><Kpi label="Body Battery" number={metric(chosen,"battery")}/></div>}
       {(detail==="Resumen"||detail==="Recuperación")&&<div className="panel history-card"><h2><HeartPulse size={20}/> Recuperación</h2><div className="detail-grid"><div><span>VFC nocturna</span><strong>{fmt(metric(chosen,"vfc"))} ms</strong></div><div><span>FC reposo</span><strong>{fmt(metric(chosen,"reposo"))} lpm</strong></div><div><span>Readiness</span><strong>{value(Array.isArray(chosen?.readiness)?getObj(chosen.readiness[0]).score:getObj(chosen?.readiness).score)}</strong></div><div><span>Última sincronización</span><strong>{chosen?new Date(chosen.synced_at).toLocaleTimeString("es-CL"):"—"}</strong></div></div></div>}
       {(detail==="Resumen"||detail==="Ejercicio")&&<div className="panel history-card"><h2><Dumbbell size={20}/> Actividades Garmin</h2><pre className="json-preview">{chosen?.activities?JSON.stringify(chosen.activities,null,2):"Sin actividad sincronizada."}</pre></div>}
-      {(detail==="Resumen"||detail==="Alimentación")&&<div className="panel history-card"><h2><Utensils size={20}/> Comidas</h2>{todaysMeals.length?todaysMeals.map(m=><p key={m.id}>{m.meal_type}: {m.description} — {m.protein_g===null?"Proteína sin estimar":m.protein_g+" g"}</p>):<p className="muted">Sin comidas registradas.</p>}</div>}
+      {(detail==="Resumen"||detail==="Alimentación")&&<div className="panel history-card"><h2><Utensils size={20}/> Comidas</h2><MealGroups meals={todaysMeals} dates={activeDates}/></div>}
     </>}
     {tab==="progress"&&<>
-      <div className="metric-grid"><Kpi label="Días sincronizados" number={days.length}/><Kpi label="Días con comidas" number={new Set((data?.meals||[]).map(m=>m.date)).size}/><Kpi label="Días con actividad" number={days.filter(d=>getObj(d.activities).count).length}/><Kpi label="Días con sueño" number={days.filter(d=>metric(d,"sueño")!==null).length}/></div>
-      <div className="panel"><h2><TrendingUp size={19}/> 16 cruces de métricas</h2><p className="muted">Indicadores incompletos se muestran como «—». Las comparaciones no demuestran causalidad.</p>
-        <div className="cross-options">{crosses.map((c,i)=><button className={"cross-button "+(cross===i?"active":"")} onClick={()=>setCross(i)} key={c.title}>{c.title}<small>{c.metrics.length} variables</small></button>)}</div>
-        <div className="cross-detail"><span className="eyebrow">CRUCE {cross+1} · {crosses[cross].metrics.length} VARIABLES</span><h3>{crosses[cross].title}</h3><div className="row-wrap">{crosses[cross].metrics.map((m,i)=><button className={"chip "+(count===i?"lime":"")} key={m} onClick={()=>setCount(i)}>{m}</button>)}</div><Line numbers={days.map(d=>metric(d,crosses[cross].metrics[count]||crosses[cross].metrics[0]))}/><p>{crosses[cross].desc}</p><div className="safety"><ShieldCheck size={17}/> El análisis personalizado debe considerar volumen de datos, variación diaria y posibles factores externos.</div></div>
-      </div>
+      <div className="metric-grid"><Kpi label="Días Garmin sincronizados" number={days.length}/><Kpi label="Días con comidas" number={new Set((data?.meals||[]).map(m=>m.date)).size}/><Kpi label="Días con actividad" number={days.filter(d=>Array.isArray(getObj(d.activities).activities)&&((getObj(d.activities).activities as unknown[]).length>0)).length}/><Kpi label="Días con sueño" number={days.filter(d=>metric(d,"sueño")!==null).length}/></div>
+      <TrendExplorer days={days} meals={data?.meals||[]} date={date}/>
     </>}
     {tab==="catalog"&&<>
       <div className="panel catalog-controls"><div className="search-input"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar nombre Garmin o español…"/></div><div className="filter-grid"><label>Categoría<input placeholder="Ej. BENCH_PRESS" value={category} onChange={e=>setCategory(e.target.value)}/></label><label>Músculo<input placeholder="Ej. CHEST" value={muscle} onChange={e=>setMuscle(e.target.value)}/></label><label>Equipamiento<input placeholder="Ej. DUMBBELL" value={equipment} onChange={e=>setEquipment(e.target.value)}/></label></div><p className="muted">{catalogError||total+" coincidencias Garmin; mostrando "+catalog.length+". Búsqueda dinámica."}</p></div>
