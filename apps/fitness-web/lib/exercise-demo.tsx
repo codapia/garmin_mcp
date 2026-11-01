@@ -27,6 +27,25 @@ const DEMOS:Record<string,Demo>={
   "BANDED_EXERCISES/ROW":{id:"3144",variant:"Ejemplo de remo sentado con banda"},
   "BANDED_EXERCISES/CURL":{id:"3123",variant:"Curl de bíceps sentado con banda"}
 };
+export const EXERCISE_DEMO_LIBRARY=[
+  {category:"BANDED_EXERCISES",exercise_name:"CURL",name_es:"Curl de bíceps con banda",name_en:"Banded Curl",primary_muscles:["BICEPS"],equipment:["BAND"]},
+  {category:"BANDED_EXERCISES",exercise_name:"ROW",name_es:"Remo con banda",name_en:"Banded Row",primary_muscles:["BACK"],equipment:["BAND"]},
+  {category:"BENCH_PRESS",exercise_name:"DUMBBELL_BENCH_PRESS",name_es:"Press plano con mancuernas",name_en:"Dumbbell Bench Press",primary_muscles:["CHEST"],equipment:["DUMBBELL","BENCH"]},
+  {category:"BENCH_PRESS",exercise_name:"INCLINE_DUMBBELL_BENCH_PRESS",name_es:"Press inclinado con mancuernas",name_en:"Incline Dumbbell Bench Press",primary_muscles:["CHEST"],equipment:["DUMBBELL","BENCH"]},
+  {category:"CURL",exercise_name:"INCLINE_DUMBBELL_BICEPS_CURL",name_es:"Curl inclinado con mancuernas",name_en:"Incline Dumbbell Biceps Curl",primary_muscles:["BICEPS"],equipment:["DUMBBELL","BENCH"]},
+  {category:"TRICEPS_EXTENSION",exercise_name:"DUMBBELL_LYING_TRICEPS_EXTENSION",name_es:"Extensión de tríceps tumbado",name_en:"Dumbbell Lying Triceps Extension",primary_muscles:["TRICEPS"],equipment:["DUMBBELL","BENCH"]},
+  {category:"SQUAT",exercise_name:"GOBLET_SQUAT",name_es:"Sentadilla goblet",name_en:"Goblet Squat",primary_muscles:["QUADRICEPS","GLUTES"],equipment:["DUMBBELL"]},
+  {category:"LUNGE",exercise_name:"DUMBBELL_REVERSE_LUNGE",name_es:"Zancada inversa con mancuernas",name_en:"Dumbbell Reverse Lunge",primary_muscles:["QUADRICEPS","GLUTES"],equipment:["DUMBBELL"]},
+  {category:"CALF_RAISE",exercise_name:"WEIGHTED_SEATED_CALF_RAISE",name_es:"Elevación de gemelos sentado",name_en:"Weighted Seated Calf Raise",primary_muscles:["CALVES"],equipment:["DUMBBELL","BENCH"]},
+  {category:"HIP_STABILITY",exercise_name:"DEAD_BUG",name_es:"Dead bug",name_en:"Dead Bug",primary_muscles:["ABS","CORE"],equipment:["BODYWEIGHT"]},
+  {category:"DEADLIFT",exercise_name:"ROMANIAN_DEADLIFT",name_es:"Peso muerto rumano",name_en:"Romanian Deadlift",primary_muscles:["GLUTES","HAMSTRINGS"],equipment:["DUMBBELL"]},
+  {category:"SHOULDER_PRESS",exercise_name:"DUMBBELL_SHOULDER_PRESS",name_es:"Press de hombros con mancuernas",name_en:"Dumbbell Shoulder Press",primary_muscles:["SHOULDERS"],equipment:["DUMBBELL"]}
+];
+export function hasExerciseDemo(category:unknown,exerciseName:unknown):boolean{
+  return typeof category==="string"&&typeof exerciseName==="string" &&
+    Boolean(DEMOS[category.toUpperCase()+"/"+exerciseName.toUpperCase()]);
+}
+
 const FRAME_SEQUENCE=[0,1,2,1] as const;
 const BASE="/exercise-demos/";
 
