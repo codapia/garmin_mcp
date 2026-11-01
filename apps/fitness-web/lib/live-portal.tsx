@@ -24,8 +24,8 @@ export function chileDay():string{
   const part=(name:string)=>parts.find(p=>p.type===name)?.value||"";
   return part("year")+"-"+part("month")+"-"+part("day");
 }
-function startDay(days:number):string{
-  const t=new Date(chileDay()+"T12:00:00Z");t.setUTCDate(t.getUTCDate()-days);
+function offsetDay(days:number):string{
+  const t=new Date(chileDay()+"T12:00:00Z");t.setUTCDate(t.getUTCDate()+days);
   return t.toISOString().slice(0,10);
 }
 function dataNum(obj:unknown,keys:string[]):number|null{
@@ -86,7 +86,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   async function load(){
     setLoading(true);
     try{
-      const r=await fetch("/api/fitness/timeline?start="+startDay(60)+"&end="+chileDay(),{cache:"no-store"});
+      const r=await fetch("/api/fitness/timeline?start="+offsetDay(-60)+"&end="+offsetDay(30),{cache:"no-store"});
       const obj=await r.json();if(!r.ok)throw Error(obj.error||"Servicio no disponible");
       setData(obj);setError("");
     }catch(e){setError(e instanceof Error?e.message:"Error de carga");}
