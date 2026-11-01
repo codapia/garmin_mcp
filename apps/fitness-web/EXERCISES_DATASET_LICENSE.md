@@ -64,6 +64,8 @@ that explicitly covers hosting and displaying the media in this app.
 
 ## Visualization
 
+The 12 exercise IDs that match the previously installed Flow Exercise Dataset artwork also display their **existing** Flow SVG sequences, clearly credited separately. No Gym visual media is imported.
+
 The `lib/exercises-dataset-catalog.tsx` muscle-map illustration is a new
 approximate SVG region diagram authored for Fitness. Lime indicates primary
 target muscle regions, cyan indicates secondary/synergist regions based on
