@@ -70,6 +70,8 @@ export default function LivePortal({tab}:{tab:Tab}){
   const [error,setError]=useState("");
   const [loading,setLoading]=useState(true);
   const [syncing,setSyncing]=useState(false);
+  const [sendingPlan,setSendingPlan]=useState<string|null>(null);
+  const [sendMessage,setSendMessage]=useState("");
   const [date,setDate]=useState(chileDay);
   const [detail,setDetail]=useState("Resumen");
   const [cross,setCross]=useState(0);
@@ -119,6 +121,20 @@ export default function LivePortal({tab}:{tab:Tab}){
     }catch(e){setError(e instanceof Error?e.message:"Error de Garmin");}
     finally{setSyncing(false);}
   }
+  async function sendToGarmin(plan:Plan){
+    setSendingPlan(plan.id);setSendMessage("");
+    try{
+      const r=await fetch("/api/fitness/send",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({plan_id:plan.id,expected_version:plan.version})
+      });
+      const reply=await r.json();
+      if(!r.ok||!reply.ok)throw Error(reply.error||"No se pudo enviar la rutina");
+      setSendMessage("Rutina programada para "+reply.result.scheduled_date+". Sincroniza Garmin Connect con tu reloj.");
+      await load();
+    }catch(e){setSendMessage(e instanceof Error?e.message:"Error al enviar rutina");}
+    finally{setSendingPlan(null);}
+  }
   if(loading&&!data)return <div className="panel"><p>Consultando historial privado…</p></div>;
   if(error&&!data)return <div className="panel"><h2>Error de conexión</h2><p>{error}</p><button className="neon-button" onClick={load}>Reintentar</button></div>;
   return <div className="live-content">
@@ -136,12 +152,25 @@ export default function LivePortal({tab}:{tab:Tab}){
         <Kpi label="Estrés medio" number={metric(chosen,"estrés")}/>
       </div>
       <div className="home-grid">
-        <div className="panel"><h2><Dumbbell size={19}/> Rutinas programadas</h2>{todaysPlans.length?todaysPlans.map(p=><p key={p.id}>{p.title} · {p.steps.length} ejercicios</p>):<p className="muted">No hay rutina guardada en Fitness para este día. Se podrá registrar desde ChatGPT.</p>}</div>
+        <div className="panel"><h2><Dumbbell size={19}/> Rutinas programadas</h2>{todaysPlans.length?todaysPlans.map(p=><p key={p.id}>{p.title} · {p.steps.length} ejercicios · {p.garmin_workout_id?"Vinculada a Garmin #"+p.garmin_workout_id:"Solo en Fitness"}</p>):<p className="muted">No hay rutina guardada en Fitness para este día. Se podrá registrar desde ChatGPT.</p>}</div>
         <div className="panel"><h2><Utensils size={19}/> Alimentación</h2><p>{todaysMeals.length} comidas registradas.</p><p className="muted">Los totales solo cuentan alimentos con estimación registrada; un día incompleto no es un consumo de 0 kcal.</p></div>
       </div>
     </>}
     {tab==="workout"&&<>
       {!todaysPlans.length&&<div className="panel"><p>Sin rutina web guardada para este día. Puedes pedirme por ChatGPT que cree una y la guarde aquí. La programación en Garmin es un paso separado.</p></div>}
+      {sendMessage&&<div className="panel" role="status"><p>{sendMessage}</p></div>}
+      {todaysPlans.map(p=><div className="panel" key={p.id}>
+        <div className="panel-heading"><h2><Dumbbell size={19}/> {p.title}</h2></div>
+        <p className="muted">{p.steps.length} pasos · {p.garmin_workout_id?"Garmin #"+p.garmin_workout_id:"Guardada solamente en Fitness"}</p>
+        <button className="neon-button" disabled={sendingPlan!==null ||
+          p.steps.some(s=>!s.category||!s.exercise_name||!s.sets||!s.reps)}
+          onClick={()=>void sendToGarmin(p)}>
+          <RefreshCcw size={17} className={sendingPlan===p.id?"spin":""}/>
+          {sendingPlan===p.id?"Enviando…":p.garmin_workout_id?"Verificar programación en Garmin":"Enviar a Garmin"}
+        </button>
+        {p.steps.some(s=>!s.category||!s.exercise_name||!s.sets||!s.reps)&&
+          <p className="muted">Para enviar, cada paso debe incluir category, exercise_name, sets y reps oficiales de Garmin.</p>}
+      </div>)}
       <div className="exercise-grid">{todaysPlans.flatMap(p=>p.steps.map((s,i)=>({p,s,i}))).map(({p,s,i})=>
         <article className="exercise-card panel" key={p.id+"-"+i}><span className="eyebrow">{p.title} · EJERCICIO {i+1}</span><h3>{value(s.name)}</h3>
           <div className="workout-numbers"><div><span>Series</span><strong>{value(s.sets??s.series)}</strong></div><div><span>Reps</span><strong>{value(s.reps)}</strong></div><div><span>Carga</span><strong>{value(s.weight??s.load)}</strong></div><div><span>Descanso</span><strong>{value(s.rest_seconds??s.rest)}</strong></div></div>
