@@ -160,3 +160,46 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 .catalog-demo-switch button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 @media(max-width:760px){.exercise-load-form{grid-template-columns:1fr 1fr}.exercise-load-form>button{grid-column:1/-1}.workout-detail-heading{gap:10px}.exercise-load-current{flex-wrap:wrap}}
 @media(max-width:390px){.exercise-load-form{grid-template-columns:1fr}.exercise-load-form>button{grid-column:auto}}
+
+
+/* Exercises Dataset (MIT metadata) — original region diagram, no Gym visual media */
+.catalog-source-tabs{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 18px}
+.catalog-source-tabs button{background:#213022;color:#bed6b4;border:1px solid #43583d;border-radius:12px;padding:12px 17px;font-weight:800;cursor:pointer}
+.catalog-source-tabs button.active{background:var(--lime);color:#19290d;border-color:var(--lime)}
+.catalog-source-tabs button:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+.exercises-source-note{display:flex;gap:12px;align-items:flex-start;margin-bottom:16px;line-height:1.5}
+.exercises-source-note svg{color:var(--lime);flex-shrink:0}
+.exercises-source-note strong{font-size:14px}
+.exercises-source-note p{font-size:12px;color:var(--muted);margin:6px 0 0}
+.exercises-source-note p strong{color:#f4d3a6;font-size:12px}
+.exercises-dataset .filter-grid select{width:100%;min-width:0;border:1px solid #475b45;background:#1b251d;color:#e7f2e2;border-radius:8px;padding:8px;max-width:100%}
+.ext-exercise-card{display:flex;flex-direction:column;min-width:0;gap:8px}
+.ext-exercise-card h3{margin:1px 0;font-size:19px;text-transform:capitalize}
+.ext-exercise-card>.muted{margin:0;font-size:12px}
+.ext-card-top{display:flex;justify-content:space-between;align-items:center;gap:9px}
+.ext-id{font-size:11px;color:#a0b599}
+.muscle-map{background:radial-gradient(ellipse at 50% 30%,#1f3625,#112117);border:1px solid #3b5b42;border-radius:14px;padding:10px;margin:5px 0}
+.muscle-figures{display:flex;justify-content:center;align-items:center;gap:14px}
+.muscle-figures svg{width:120px;max-width:45%;height:245px}
+.muscle-map-key{display:flex;justify-content:center;gap:17px;flex-wrap:wrap;margin-top:4px}
+.muscle-map-key span{font-size:10px;display:inline-flex;align-items:center;gap:6px;color:#cddcc9}
+.muscle-map-key i{display:inline-block;width:9px;height:9px;border-radius:50%}
+.muscle-map-key i.primary{background:var(--lime)}
+.muscle-map-key i.secondary{background:#67cde1}
+.muscle-map p{font-size:10px;color:#9faf9f;line-height:1.55;margin:9px 4px 0;text-align:center}
+.muscle-labels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.muscle-labels>div{padding:10px;background:#263627;border-radius:10px;display:flex;flex-direction:column;gap:4px}
+.muscle-labels strong{font-size:10px;color:var(--lime)}
+.muscle-labels>div+div strong{color:#67cde1}
+.muscle-labels span{font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.exercise-instructions-toggle{display:flex;justify-content:space-between;align-items:center;background:#293d2b;border:1px solid #405b42;color:#e9f6e4;width:100%;border-radius:9px;padding:10px 13px;font-size:12px;font-weight:700;cursor:pointer}
+.exercise-instructions-toggle svg{transition:transform .15s}
+.exercise-instructions-toggle svg.open{transform:rotate(180deg)}
+.exercise-instructions{line-height:1.65;font-size:12px;color:#d9e9d4;border-left:2px solid var(--lime);padding-left:12px;margin:3px 0 5px}
+.ext-media-note{font-size:10px;color:#e2c391;line-height:1.5;margin:2px 0 0}
+.exercises-more{display:flex;justify-content:center;margin:20px 0}
+.exercises-more button{border-radius:12px;background:#34472c;color:#dff5c9;border:1px solid #6b8b43;font-weight:800;padding:13px 27px;cursor:pointer}
+.exercises-more button:hover{border-color:var(--lime)}
+.exercises-license{line-height:1.65}
+.exercises-license a{color:var(--lime)}
+@media(max-width:760px){.muscle-figures svg{height:210px}.muscle-labels{grid-template-columns:1fr 1fr}.catalog-source-tabs button{flex:1}}

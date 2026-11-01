@@ -50,6 +50,9 @@ jobs:
       - name: Test canonical browser origin
         working-directory: apps/fitness-web
         run: npm run test:origin
+      - name: Verify MIT exercise metadata and restricted-media exclusion
+        working-directory: apps/fitness-web
+        run: npm run test:exercises
       - name: Typecheck
         working-directory: apps/fitness-web
         run: npm run typecheck
