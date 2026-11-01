@@ -59,15 +59,28 @@ export async function savePlan(payload:unknown){
     if(typeof p.id!=="string"||!/^[0-9a-f-]{36}$/.test(p.id)||!Number.isInteger(p.expected_version))
       throw new Error("Para editar se exige ID y expected_version");
     const result=await db().query(`UPDATE fitness_plans SET planned_on=$1,title=$2,steps=$3::jsonb,
-      version=version+1,updated_at=now() WHERE id=$4 AND version=$5
+      version=version+1,updated_at=now() WHERE id=$4 AND version=$5 AND garmin_workout_id IS NULL
       RETURNING id,planned_on::text AS date,title,steps,version`,
       [p.date,title,JSON.stringify(steps),p.id,p.expected_version]);
-    if(!result.rows.length)throw new Error("No se modificó: ID inexistente o versión cambió");
+    if(!result.rows.length)throw new Error("No se modificó: versión cambiada, plan inexistente o ya enviado a Garmin. Crea un nuevo plan para modificar una rutina enviada.");
     return result.rows[0];
   }
-  const result=await db().query(`INSERT INTO fitness_plans(planned_on,title,steps) VALUES($1,$2,$3::jsonb)
-   RETURNING id,planned_on::text AS date,title,steps,version`,[p.date,title,JSON.stringify(steps)]);
-  return result.rows[0];
+  // Serialise identical requests so retrying an MCP write does not create duplicate plans.
+  const client=await db().connect();
+  try{
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))",[p.date+"|"+title]);
+    const previous=await client.query(`SELECT id,planned_on::text AS date,title,steps,version,garmin_workout_id
+      FROM fitness_plans WHERE planned_on=$1 AND title=$2 AND steps=$3::jsonb
+      ORDER BY created_at ASC LIMIT 1`,[p.date,title,JSON.stringify(steps)]);
+    if(previous.rows.length){await client.query("COMMIT");return previous.rows[0];}
+    const inserted=await client.query(`INSERT INTO fitness_plans(planned_on,title,steps) VALUES($1,$2,$3::jsonb)
+      RETURNING id,planned_on::text AS date,title,steps,version,garmin_workout_id`,
+      [p.date,title,JSON.stringify(steps)]);
+    await client.query("COMMIT");
+    return inserted.rows[0];
+  }catch(e){await client.query("ROLLBACK").catch(()=>{});throw e;}
+  finally{client.release();}
 }
 export async function storeGarminDay(date:string){
   if(!validDay(date))throw new Error("Fecha inválida");
