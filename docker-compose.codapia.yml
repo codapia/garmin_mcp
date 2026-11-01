@@ -27,6 +27,12 @@ services:
       GARMIN_MCP_PORT: "8000"
       GARMIN_MCP_STATELESS_HTTP: "true"
       GARMIN_MCP_HTTP_TOKEN: "${GARMIN_MCP_HTTP_TOKEN:?Provide a randomly generated secret in Coolify}"
+      # Optional Fitness API bridge; keep blank until Cloudflare Access service token is ready.
+      # Never commit real credentials. Access is enforced by the receiving Fitness API.
+      FITNESS_API_URL: "${FITNESS_API_URL:-}"
+      FITNESS_INTERNAL_TOKEN: "${FITNESS_INTERNAL_TOKEN:-}"
+      FITNESS_CF_SERVICE_CLIENT_ID: "${FITNESS_CF_SERVICE_CLIENT_ID:-}"
+      FITNESS_CF_SERVICE_CLIENT_SECRET: "${FITNESS_CF_SERVICE_CLIENT_SECRET:-}"
       # Full Garmin MCP catalog (including write/destructive operations).
       # This is intentional and MUST remain behind Cloudflare OAuth + Bearer auth.
       # No GARMIN_ENABLED_TOOLS allowlist or GARMIN_DISABLED_TOOLS denylist:

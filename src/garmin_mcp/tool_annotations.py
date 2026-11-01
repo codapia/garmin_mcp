@@ -40,6 +40,7 @@ ADDITIVE_TOOLS = frozenset(
         "upload_workouts",
         "fitness_registrar_comida",
         "fitness_guardar_rutina",
+        "fitness_enviar_rutina_garmin",
         "fitness_sincronizar_garmin",
         "upsert_and_log",
     }

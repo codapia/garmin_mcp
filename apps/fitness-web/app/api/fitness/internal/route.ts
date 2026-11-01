@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { accessDenied, internalDenied } from "../../../../lib/server/access";
 import { saveMeal, listMeals, savePlan, listPlans, storeGarminDay, getTimeline, validDay } from "../../../../lib/server/fitness";
+import { sendPlanToGarmin } from "../../../../lib/server/plan-delivery";
 
 export const dynamic="force-dynamic";
 export async function POST(req:NextRequest){
@@ -21,6 +22,13 @@ export async function POST(req:NextRequest){
       case "list_meals": data=await listMeals(start as string,end as string);break;
       case "save_plan": data=await savePlan(body.payload);break;
       case "list_plans": data=await listPlans(start as string,end as string);break;
+      case "send_plan": {
+        const p=body.payload;
+        if(!p||typeof p!=="object"||Array.isArray(p))throw Error("Plan inválido");
+        const args=p as Record<string,unknown>;
+        data=await sendPlanToGarmin(args.plan_id as string,args.expected_version as number);
+        break;
+      }
       case "timeline": data=await getTimeline(start as string,end as string);break;
       case "sync_garmin": if(!validDay(body.date))throw Error("Fecha inválida");data=await storeGarminDay(body.date);break;
       default:return NextResponse.json({error:"Acción no permitida"},{status:400});

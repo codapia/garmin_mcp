@@ -172,6 +172,10 @@
       "description": "Consultar planes web creados, sin alterar sus equivalentes en Garmin."
     },
     {
+      "name": "fitness_enviar_rutina_garmin",
+      "description": "Programar una rutina ya guardada en Fitness, en Garmin Connect."
+    },
+    {
       "name": "fitness_guardar_rutina",
       "description": "Crear o actualizar un plan de entrenamiento SOLO EN FITNESS CODAPIA."
     },

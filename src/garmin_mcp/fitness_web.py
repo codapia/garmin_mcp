@@ -106,6 +106,10 @@ def register_tools(app):
         """Crear o actualizar un plan de entrenamiento SOLO EN FITNESS CODAPIA.
 
         Al editar requiere plan_id y expected_version para prevenir sobreescrituras.
+        Para poder enviar el plan al Forerunner, cada paso de fuerza necesita
+        name (texto), category y exercise_name (códigos Garmin oficiales),
+        sets, reps y rest_seconds; opcionalmente weight_kg. Consultar primero
+        search_exercises / validate_strength_exercises.
         NO cambia ni elimina entrenamientos Garmin. Confirma cambios en Garmin aparte.
         """
         payload:dict[str,Any]={"date":_check_date(date),"title":title,"steps":steps}
@@ -115,6 +119,21 @@ def register_tools(app):
             payload.update({"id":plan_id, "expected_version":expected_version})
         result = await asyncio.to_thread(fitness_request,{"action":"save_plan","payload":payload})
         return json.dumps(result,ensure_ascii=False)
+
+    @app.tool()
+    async def fitness_enviar_rutina_garmin(plan_id: str, expected_version: int) -> str:
+        """Programar una rutina ya guardada en Fitness, en Garmin Connect.
+
+        Usa el ID y la versión de fitness_consultar_rutinas; conserva la referencia
+        Garmin y es seguro reintentar la programación sin duplicar el workout.
+        No elimina ni reemplaza rutinas Garmin preexistentes.
+        """
+        result = await asyncio.to_thread(
+            fitness_request,
+            {"action": "send_plan",
+             "payload": {"plan_id": plan_id, "expected_version": expected_version}},
+        )
+        return json.dumps(result, ensure_ascii=False)
 
     @app.tool()
     async def fitness_sincronizar_garmin(date: str) -> str:
