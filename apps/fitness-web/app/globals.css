@@ -160,3 +160,23 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 .catalog-demo-switch button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 @media(max-width:760px){.exercise-load-form{grid-template-columns:1fr 1fr}.exercise-load-form>button{grid-column:1/-1}.workout-detail-heading{gap:10px}.exercise-load-current{flex-wrap:wrap}}
 @media(max-width:390px){.exercise-load-form{grid-template-columns:1fr}.exercise-load-form>button{grid-column:auto}}
+
+
+.anatomy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px}
+.anatomy-card{min-width:0;display:flex;flex-direction:column;gap:12px}
+.anatomy-card h3{margin:0;font-size:17px}
+.anatomy-intro{margin:12px 0 18px;line-height:1.6}
+.anatomy-figure{background:#18261b;border:1px solid #465a43;border-radius:15px;padding:10px}
+.anatomy-figure svg{width:100%;height:auto;max-height:300px;display:block}
+.anatomy-legend{display:flex;flex-direction:column;gap:7px;font-size:11px;color:#dce9d5;margin:10px 4px}
+.anatomy-legend span{display:flex;align-items:flex-start;gap:7px}
+.anatomy-legend i{width:10px;height:10px;flex:0 0 10px;border-radius:3px;margin-top:3px}
+.anatomy-disclaimer{display:block;font-size:10px;color:#a8bca3;line-height:1.5;margin:8px 4px}
+.anatomy-instructions button{width:100%;display:flex;gap:8px;align-items:center;border:1px solid #526a4a;background:#30432d;color:#e4f1db;padding:10px;border-radius:10px}
+.anatomy-instructions button svg:last-child{margin-left:auto}
+.anatomy-instructions ol{padding-left:23px;line-height:1.65;font-size:12px;color:#c7dac3}
+.anatomy-instructions li{margin-bottom:7px}
+.anatomy-more{margin:22px auto}
+.anatomy-status{display:flex;gap:10px;align-items:center}
+.anatomy-credit{font-size:11px;line-height:1.6}
+.anatomy-credit a{color:var(--lime)}
