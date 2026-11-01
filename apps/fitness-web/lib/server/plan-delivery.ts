@@ -41,7 +41,7 @@ export function toGarminWorkout(title:string,steps:Step[]){
     };
     const recovery={
       type:"ExecutableStepDTO",stepOrder:++next,
-      stepType:{stepTypeId:5,stepTypeKey:"rest"},description:"Descanso",
+      stepType:{stepTypeId:4,stepTypeKey:"recovery"},description:"Descanso",
       endCondition:{conditionTypeId:2,conditionTypeKey:"time"},endConditionValue:step.rest_seconds??60,
       targetType:noTarget
     };
@@ -60,7 +60,7 @@ function garminResult(x:unknown):Record<string,unknown>{
 export async function sendPlanToGarmin(planId:string,expectedVersion:number){
   if(!uuid.test(planId)||!positiveInteger(expectedVersion,1,1000000))throw new Error("ID o versión inválidos");
   const client=await db().connect();
-  let row:Stored;
+  let row!:Stored;
   let workoutId:string|null=null;
   try{
     await client.query("BEGIN");
