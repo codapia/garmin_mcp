@@ -1,4 +1,4 @@
-# Fitness Codapia — persistencia y Garmin (PR #5)
+# Fitness Codapia — persistencia, Garmin y envío de rutinas
 
 ## Arquitectura
 - **Repositorio:** `codapia/garmin_mcp`; Garmin MCP original continúa en su propia app Coolify.
@@ -54,3 +54,42 @@ Los gráficos y cruces de sueño, VFC, estrés, alimentación, carga y progreso 
 El POST de navegador `POST /api/fitness/sync` compara el encabezado `Origin` contra `https://fitness.codapia.cl` (predeterminado) y no contra `req.nextUrl.origin`: detrás de Cloudflare Tunnel este último puede ser una dirección del contenedor. La comparación es **exacta** y rechaza orígenes ausentes o ajenos. Opcionalmente se puede establecer `FITNESS_PUBLIC_ORIGIN` para entornos de prueba o un cambio explícito del hostname. No hay que modificar esa variable para el despliegue de producción actual.
 
 Prueba: `npm run test:origin` (integrada en el CI). El endpoint sigue requiriendo JWT firmado de Cloudflare Access, y la API máquina-a-máquina utiliza una ruta separada.
+
+## Flujo de entrenamiento desde ChatGPT y desde la página
+
+1. ChatGPT registra un plan en la **BD propia Fitness** mediante `fitness_guardar_rutina`, con fecha, título y pasos. Los pasos de fuerza enviables a Garmin incluyen `name`, `category`, `exercise_name`, `sets`, `reps`, `rest_seconds` y opcionalmente `weight_kg`. Los identificadores deben provenir de `search_exercises` / `validate_strength_exercises`. Ejemplo:
+
+```json
+{
+  "date": "2026-11-01",
+  "title": "Piernas moderadas",
+  "steps": [
+    {
+      "name": "Sentadilla goblet",
+      "category": "SQUAT",
+      "exercise_name": "GOBLET_SQUAT",
+      "sets": 3,
+      "reps": 10,
+      "rest_seconds": 75,
+      "weight_kg": 8,
+      "instructions": "Mantén el tronco estable"
+    }
+  ]
+}
+```
+
+2. La rutina aparece en **Rutina** y se puede pulsar **Enviar a Garmin**. La app llama a `POST /api/fitness/send` con JWT Cloudflare Access validado y chequeo estricto de Origin para impedir CSRF. Desde ChatGPT, usar `fitness_enviar_rutina_garmin(plan_id,expected_version)` tras consultar la versión en `fitness_consultar_rutinas`; también pasa por la API privada.
+3. El backend verifica versión, valida códigos oficiales con Garmin MCP, crea el workout solo si no hay identificador, guarda el ID Garmin en PostgreSQL y luego programa la rutina por fecha. Si falla solo la programación, el reintento reutiliza el mismo workout de Garmin. **La sincronización con el reloj sucede después** mediante Garmin Connect, no inmediatamente al guardar la rutina. Para una rutina ya enlazada, el botón solo verifica/programa nuevamente; no crea duplicados.
+4. Fitness **no modifica ni borra rutinas de Garmin** ya existentes. La edición de un plan enlazado se bloquea para evitar que el contenido en Fitness diverja de lo enviado; crear una nueva versión como plan aparte y pedir consentimiento antes de sustituir planes en Garmin.
+5. Los entrenamientos *realizados* y su recuperación vienen de las herramientas de lectura Garmin y se almacenan en `fitness_garmin_days` al sincronizar. No confundir «programado» con «realizado».
+
+**Importante:** el ID se persiste en PostgreSQL antes de pedir programación, pero la escritura distribuida a Garmin no es una transacción global: si Garmin crea un workout y la respuesta de red se pierde, se debe inspeccionar Garmin antes de reintentar para evitar duplicados. No incorporar reintentos automáticos ciegos. Las funciones de envío iniciales admiten entrenamientos de fuerza con los códigos oficiales; para otros deportes se debe desarrollar su conversión específica y validarla.
+
+### Activación del puente ChatGPT → Fitness
+
+- En Cloudflare Access, permitir explícitamente **Service Auth** para un service token exclusivo de la aplicación `fitness.codapia.cl`, conservando la política humana existente. Crear y custodiar Client ID y Client Secret del servicio de forma segura; no colocarlos en Git ni Craft.
+- Coolify → **Garmin / production / garmin_mcp**: cargar `FITNESS_API_URL=https://fitness.codapia.cl/api/fitness/internal`, `FITNESS_INTERNAL_TOKEN` (el mismo de Fitness), `FITNESS_CF_SERVICE_CLIENT_ID`, `FITNESS_CF_SERVICE_CLIENT_SECRET`. El Compose exporta estas variables opcionales al contenedor y sin valor por defecto secreto.
+- Re-desplegar Garmin MCP, comprobar salud, enumerar las **siete** herramientas `fitness_*` en el upstream de Cloudflare MCP; **seleccionar las siete en el portal ChatGPT**, actualizar/sincronizar el conector y probar `fitness_consultar_rutinas` primero. A continuación probar una comida de ensayo **identificada como ensayo**, verificar la fila en PostgreSQL y eliminarla mediante procedimiento administrativo si fue una prueba. No introducir entradas falsas en el historial real.
+- El servicio Fitness mantiene `FITNESS_INTERNAL_TOKEN`, `FITNESS_CF_ACCESS_AUD`, `FITNESS_CF_ACCESS_TEAM_DOMAIN`, la contraseña de Postgres y el Bearer Garmin. La autenticación de servicio Cloudflare no sustituye el Bearer interno.
+- No asumir que una herramienta está disponible para ChatGPT solo porque exista en la imagen o en el manifiesto DXT; el portal es una lista seleccionada separada.
+
