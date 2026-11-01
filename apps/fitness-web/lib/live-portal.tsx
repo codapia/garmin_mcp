@@ -5,6 +5,7 @@ import { Activity, CalendarDays, CheckCircle2, Dumbbell, HeartPulse, Moon, Refre
 import { DatePickerBar, MealGroups, MealWeekGrid, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
 import { ExerciseDemo, EXERCISE_DEMO_LIBRARY, hasExerciseDemo } from "./exercise-demo";
 import { ExerciseLoad, WorkoutWeekGrid, loadDisplay, type WorkoutPlan } from "./workout-week";
+import { ExerciseMuscleLibrary } from "./exercise-muscle-library";
 
 type Tab="home"|"workout"|"food"|"history"|"progress"|"catalog";
 type Day={
@@ -84,7 +85,8 @@ export default function LivePortal({tab}:{tab:Tab}){
   const [catalog,setCatalog]=useState<CatalogExercise[]>([]);
   const [total,setTotal]=useState(0);
   const [catalogError,setCatalogError]=useState("");
-  const [demoOnly,setDemoOnly]=useState(true);
+  const [catalogMode,setCatalogMode]=useState<"animations"|"garmin"|"muscles">("animations");
+  const demoOnly=catalogMode==="animations";
   async function load(){
     setLoading(true);
     try{
@@ -96,7 +98,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   }
   useEffect(()=>{void load();},[]);
   useEffect(()=>{
-    if(tab!=="catalog"||demoOnly)return;
+    if(tab!=="catalog"||catalogMode!=="garmin")return;
     const controller=new AbortController();
     const timer=setTimeout(async()=>{
       try{
@@ -107,7 +109,7 @@ export default function LivePortal({tab}:{tab:Tab}){
       }catch(e){if(!controller.signal.aborted)setCatalogError(e instanceof Error?e.message:"Error");}
     },280);
     return ()=>{clearTimeout(timer);controller.abort();};
-  },[tab,query,category,muscle,equipment,demoOnly]);
+  },[tab,query,category,muscle,equipment,catalogMode]);
   const byDay=useMemo(()=>new Map((data?.days||[]).map(d=>[d.date,d])),[data]);
   const chosen=byDay.get(date);
   const activeDates=periodDates(date,period);
@@ -124,7 +126,7 @@ export default function LivePortal({tab}:{tab:Tab}){
       (!muscle||e.primary_muscles.some(v=>v.toLowerCase().includes(muscle.toLowerCase())))&&
       (!equipment||e.equipment.some(v=>v.toLowerCase().includes(equipment.toLowerCase())));
   });
-  const shownCatalog:CatalogExercise[]=demoOnly?visibleDemoExercises:[...catalog].sort((a,b)=>Number(hasExerciseDemo(b.category,b.exercise_name))-Number(hasExerciseDemo(a.category,a.exercise_name)));
+  const shownCatalog:CatalogExercise[]=demoOnly?visibleDemoExercises:catalogMode==="garmin"?[...catalog].sort((a,b)=>Number(hasExerciseDemo(b.category,b.exercise_name))-Number(hasExerciseDemo(a.category,a.exercise_name))):[];
   const periodCaption=period==="day"?"Día "+longDate(date):"Semana "+longDate(activeDates[0])+" al "+longDate(activeDates[6]);
   const imported=(p:Plan)=>p.steps.some(step=>Boolean(step.source_garmin_workout_id));
   const alreadyInGarmin=(p:Plan)=>Boolean(p.garmin_workout_id)||imported(p);
@@ -238,8 +240,8 @@ export default function LivePortal({tab}:{tab:Tab}){
       <TrendExplorer days={days} meals={data?.meals||[]} date={date}/>
     </>}
     {tab==="catalog"&&<>
-      <div className="panel catalog-controls"><div className="catalog-demo-switch" role="group" aria-label="Disponibilidad de animaciones"><button type="button" className={demoOnly?"active":""} aria-pressed={demoOnly} onClick={()=>setDemoOnly(true)}>Con animación ({EXERCISE_DEMO_LIBRARY.length})</button><button type="button" className={!demoOnly?"active":""} aria-pressed={!demoOnly} onClick={()=>setDemoOnly(false)}>Todos los ejercicios</button></div><div className="search-input"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar nombre Garmin o español…"/></div><div className="filter-grid"><label>Categoría<input placeholder="Ej. BENCH_PRESS" value={category} onChange={e=>setCategory(e.target.value)}/></label><label>Músculo<input placeholder="Ej. CHEST" value={muscle} onChange={e=>setMuscle(e.target.value)}/></label><label>Equipamiento<input placeholder="Ej. DUMBBELL" value={equipment} onChange={e=>setEquipment(e.target.value)}/></label></div><p className="muted">{demoOnly?"Mostrando "+visibleDemoExercises.length+" de "+EXERCISE_DEMO_LIBRARY.length+" demostraciones disponibles. El resto del catálogo aún no tiene animación específica.":catalogError||total+" coincidencias Garmin; mostrando "+catalog.length+" (primero los disponibles con animación)."}</p></div>
-      <div className="catalog-grid">{shownCatalog.map(e=><div className="panel catalog-card" key={e.category+"/"+e.exercise_name}><span className="chip lime">{e.category}</span><h3>{e.name_es||e.name_en}</h3><p className="muted">{e.name_en}</p><ExerciseDemo category={e.category} exerciseName={e.exercise_name} label={e.name_es||e.name_en}/><p>{e.primary_muscles.join(", ")||"Músculo no especificado"}</p><p className="muted">{e.equipment.join(", ")||"Equipo no especificado"}</p><span className="chip">{e.exercise_name}</span></div>)}</div>
+      <div className="panel catalog-controls"><div className="catalog-demo-switch" role="group" aria-label="Biblioteca de ejercicios"><button type="button" className={catalogMode==="animations"?"active":""} aria-pressed={catalogMode==="animations"} onClick={()=>setCatalogMode("animations")}>Con animación ({EXERCISE_DEMO_LIBRARY.length})</button><button type="button" className={catalogMode==="garmin"?"active":""} aria-pressed={catalogMode==="garmin"} onClick={()=>setCatalogMode("garmin")}>Catálogo Garmin</button><button type="button" className={catalogMode==="muscles"?"active":""} aria-pressed={catalogMode==="muscles"} onClick={()=>setCatalogMode("muscles")}>Músculos (1.324)</button></div><div className="search-input"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar nombre Garmin o español…"/></div><div className="filter-grid"><label>Categoría<input placeholder="Ej. BENCH_PRESS o chest" value={category} onChange={e=>setCategory(e.target.value)}/></label><label>Músculo<input placeholder="Ej. CHEST" value={muscle} onChange={e=>setMuscle(e.target.value)}/></label><label>Equipamiento<input placeholder="Ej. DUMBBELL" value={equipment} onChange={e=>setEquipment(e.target.value)}/></label></div><p className="muted">{catalogMode==="animations"?"Mostrando "+visibleDemoExercises.length+" de "+EXERCISE_DEMO_LIBRARY.length+" demostraciones disponibles.":catalogMode==="muscles"?"Exercises Dataset: músculos e instrucciones en español, sin incorporar GIFs protegidos.":catalogError||total+" coincidencias Garmin; mostrando "+catalog.length+" (primero los disponibles con animación)."}</p></div>
+      {catalogMode==="muscles"?<ExerciseMuscleLibrary query={query} category={category} muscle={muscle} equipment={equipment}/>:<div className="catalog-grid">{shownCatalog.map(e=><div className="panel catalog-card" key={e.category+"/"+e.exercise_name}><span className="chip lime">{e.category}</span><h3>{e.name_es||e.name_en}</h3><p className="muted">{e.name_en}</p><ExerciseDemo category={e.category} exerciseName={e.exercise_name} label={e.name_es||e.name_en}/><p>{e.primary_muscles.join(", ")||"Músculo no especificado"}</p><p className="muted">{e.equipment.join(", ")||"Equipo no especificado"}</p><span className="chip">{e.exercise_name}</span></div>)}</div>}
     </>}
   </div>;
 }

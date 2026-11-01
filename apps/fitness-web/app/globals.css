@@ -160,3 +160,31 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 .catalog-demo-switch button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 @media(max-width:760px){.exercise-load-form{grid-template-columns:1fr 1fr}.exercise-load-form>button{grid-column:1/-1}.workout-detail-heading{gap:10px}.exercise-load-current{flex-wrap:wrap}}
 @media(max-width:390px){.exercise-load-form{grid-template-columns:1fr}.exercise-load-form>button{grid-column:auto}}
+
+
+/* MIT exercise metadata library. Never embeds proprietary Gym visual GIF files. */
+.muscle-library{margin-top:20px}
+.muscle-source-notice{border:1px solid #658147;background:linear-gradient(120deg,#1b2c22,#24341f);margin-bottom:19px}
+.muscle-notice-heading{display:flex;align-items:center;gap:9px}
+.muscle-notice-heading svg{color:var(--lime);flex-shrink:0}
+.muscle-notice-heading h2{margin:0;font-size:18px}
+.muscle-source-notice p{font-size:12px;line-height:1.6;margin:10px 0}
+.muscle-source-notice a{display:inline-flex;color:var(--lime);text-decoration:underline;text-underline-offset:3px;font-size:12px}
+.muscle-exercise-card{display:flex;flex-direction:column;gap:10px;min-width:0}
+.muscle-exercise-card h3{font-size:17px;line-height:1.3;margin:0}
+.muscle-exercise-heading{display:flex;align-items:center;justify-content:space-between;gap:7px}
+.muscle-target{background:#334b2b;border:1px solid #688447;border-radius:12px;padding:11px;display:flex;flex-direction:column;gap:6px}
+.muscle-target span,.muscle-support span{font-size:10px;color:#bbd5aa}
+.muscle-target strong{font-size:20px;color:var(--lime)}
+.muscle-support{display:flex;flex-direction:column;gap:4px}
+.muscle-support strong{font-size:12px;color:#e1efd9}
+.muscle-chips{display:flex;flex-wrap:wrap;gap:6px}
+.muscle-chip{font-size:10px;color:#cbe0c0;border:1px solid #536d4f;background:#2b3d2a;border-radius:100px;padding:5px 8px}
+.muscle-equipment{display:flex;gap:6px;align-items:center;font-size:12px;margin:0}
+.muscle-instructions{border-top:1px solid #445743;padding-top:11px}
+.muscle-instructions summary{cursor:pointer;display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--lime)}
+.muscle-instructions p{font-size:12px;line-height:1.75;color:#d8e6d2;margin-top:10px;white-space:pre-line}
+.muscle-no-media{border-radius:9px;background:#2c2b21;border:1px solid #575039;color:#dbcb9e;font-size:10px;line-height:1.55;margin-top:auto;display:flex;align-items:flex-start;gap:7px;padding:9px}
+.muscle-no-media svg{flex-shrink:0}
+.muscle-more{display:flex;justify-content:center;margin:23px 0}
+.muscle-more button{display:flex;align-items:center;gap:7px}
