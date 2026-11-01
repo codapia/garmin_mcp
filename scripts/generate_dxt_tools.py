@@ -31,6 +31,7 @@ from garmin_mcp import (
     womens_health,
     workout_builders,
     exercise_catalog,
+    fitness_web,
     workouts,
 )
 
@@ -51,6 +52,7 @@ MODULES = [
     nutrition,
     workout_builders,
     exercise_catalog,
+    fitness_web,
     courses,
     activity_analysis,
     calendar_events,
@@ -67,7 +69,8 @@ async def _collect_tools() -> list[dict]:
     mock_client = MagicMock()
     app = FastMCP("Garmin Connect v1.0")
     for module in MODULES:
-        module.configure(mock_client)
+        if hasattr(module, 'configure'):
+            module.configure(mock_client)
         module.register_tools(app)
 
     tools = await app.list_tools()

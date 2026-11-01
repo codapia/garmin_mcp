@@ -35,6 +35,7 @@ from garmin_mcp import womens_health
 from garmin_mcp import nutrition
 from garmin_mcp import workout_builders
 from garmin_mcp import exercise_catalog
+from garmin_mcp import fitness_web
 from garmin_mcp import courses
 from garmin_mcp import activity_analysis
 from garmin_mcp import calendar_events
@@ -855,6 +856,7 @@ def main():
     app = nutrition.register_tools(app)
     app = workout_builders.register_tools(app)
     app = exercise_catalog.register_tools(app)
+    app = fitness_web.register_tools(app)
     app = courses.register_tools(app)
     app = activity_analysis.register_tools(app)
     app = calendar_events.register_tools(app)

@@ -1,55 +1,71 @@
 name: Fitness PWA validation
 on:
   pull_request:
-    paths:
-      - apps/fitness-web/**
-      - docker-compose.fitness.yml
-      - .github/workflows/fitness-web.yml
+    paths: [apps/fitness-web/**, docker-compose.fitness.yml, src/garmin_mcp/fitness_web.py, .github/workflows/fitness-web.yml]
   push:
     branches: [main]
-    paths:
-      - apps/fitness-web/**
-      - docker-compose.fitness.yml
-      - .github/workflows/fitness-web.yml
-
+    paths: [apps/fitness-web/**, docker-compose.fitness.yml, src/garmin_mcp/fitness_web.py, .github/workflows/fitness-web.yml]
 permissions:
   contents: read
-
 jobs:
-  build:
-    runs-on: ubuntu-24.04
+  build-and-db:
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-24.04' || 'codapia-ci' }}
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_USER: fitness
+          POSTGRES_DB: fitness
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fitness -d fitness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - name: Set up Node.js 24
+      - name: Node.js 24
         uses: actions/setup-node@v4
         with:
           node-version: "24"
-      - name: Install dependencies
+      - name: Install
         working-directory: apps/fitness-web
         run: npm install --no-audit --no-fund
-      - name: Typecheck
-        working-directory: apps/fitness-web
-        run: npm run typecheck
-      - name: Build Next.js
+      - name: Test PostgreSQL schema and idempotency
         working-directory: apps/fitness-web
         env:
-          NEXT_TELEMETRY_DISABLED: "1"
+          TEST_DATABASE_URL: postgresql://fitness:ci-only-password@127.0.0.1:5432/fitness
+        run: npm run test:db
+      - name: TypeScript
+        working-directory: apps/fitness-web
+        run: npm run typecheck
+      - name: Build production PWA
+        working-directory: apps/fitness-web
         run: npm run build
-      - name: Validate separate Compose runtime
+      - name: Validate Compose security and isolation
+        env:
+          FITNESS_DB_PASSWORD: ci-only-database-pass
+          FITNESS_CF_ACCESS_TEAM_DOMAIN: test.cloudflareaccess.com
+          FITNESS_CF_ACCESS_AUD: ci-fake-app-audience
+          FITNESS_INTERNAL_TOKEN: ci-fake-private-token
+          FITNESS_GARMIN_MCP_HTTP_TOKEN: ci-fake-garmin-token
         run: |
           docker compose -f docker-compose.fitness.yml config --format json > /tmp/fitness-compose.json
           python3 - <<'PY'
           import json
-          data=json.load(open('/tmp/fitness-compose.json',encoding='utf-8'))
-          assert set(data['services'])=={'fitness-web'}
-          svc=data['services']['fitness-web']
-          assert svc['user']=='10001:10001'
-          assert svc['read_only'] is True
-          assert 'ALL' in svc['cap_drop']
-          assert all(port.get('host_ip')=='127.0.0.1' for port in svc['ports'])
-          assert svc['ports'][0]['published']=='18081'
-          assert not svc.get('volumes')
-          assert 'GARMIN_MCP_HTTP_TOKEN' not in svc.get('environment',{})
-          print('Standalone fitness PWA Compose verified')
+          d=json.load(open('/tmp/fitness-compose.json',encoding='utf-8'))
+          assert set(d['services'])=={'fitness-web','fitness-db'}
+          web,db=d['services']['fitness-web'],d['services']['fitness-db']
+          assert web['user']=='10001:10001'
+          assert web['read_only'] is True
+          assert 'ALL' in web['cap_drop']
+          assert web['ports'][0]['host_ip']=='127.0.0.1'
+          assert int(web['ports'][0]['published'])==18081
+          assert not db.get('ports')
+          assert 'FITNESS_INTERNAL_TOKEN' in web['environment']
+          assert 'CF_ACCESS_AUD' in web['environment']
+          print('Fitness Compose isolated from existing Garmin MCP')
           PY

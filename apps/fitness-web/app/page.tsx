@@ -9,6 +9,7 @@ import {
   Watch, Zap, AlertTriangle, type LucideIcon,
 } from "lucide-react";
 import { workout, exerciseCatalog, history, crosses, type WorkoutStep, type DemoDay } from "../lib/demo-data";
+import LivePortal from "../lib/live-portal";
 
 type Tab = "home" | "workout" | "food" | "history" | "progress" | "catalog";
 type HistoryTab = "overview" | "health" | "activity" | "food" | "recovery";
@@ -117,6 +118,8 @@ const detailTabs: {id:HistoryTab;label:string}[]=[
 
 function App() {
   const [tab,setTab]=useState<Tab>("home");
+  const [liveState,setLiveState]=useState<"checking"|"live"|"demo"|"error">("checking");
+  useEffect(()=>{fetch("/api/fitness/timeline?start=2026-10-27&end=2026-11-01",{cache:"no-store"}).then(r=>{setLiveState(r.ok?"live":process.env.NODE_ENV==="production"?"error":"demo")}).catch(()=>setLiveState(process.env.NODE_ENV==="production"?"error":"demo"))},[]);
   const [historyTab,setHistoryTab]=useState<HistoryTab>("overview");
   const [selectedDate,setSelectedDate]=useState(history[history.length-1].date);
   const [group,setGroup]=useState("Todos");
@@ -168,7 +171,10 @@ function App() {
       <main className="content">
         <AnimatePresence mode="wait">
           <motion.section key={tab} initial={{opacity:0,y:13}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-9}} transition={{duration:.24}} className="view">
-            {tab==="home"&&<>
+            {liveState==="live" && <LivePortal tab={tab}/>}
+            {liveState==="checking" && <div className="panel"><p>Conectando al historial privado…</p></div>}
+            {liveState==="error" && <div className="panel"><h2>No se pudo iniciar Fitness</h2><p>La base de datos o el acceso protegido no están disponibles. No mostraremos datos ficticios como si fueran reales.</p></div>}
+            {liveState==="demo" && tab==="home"&&<>
               <div className="intro"><span className="eyebrow">TU CENTRO DE ENTRENAMIENTO</span><h1>Tu salud en movimiento<span className="neon-dot">.</span></h1><p>Garmin registra la actividad. Aquí podrás comprenderla, ver tus rutinas y seguir tu evolución.</p></div>
               <div className="demo-banner"><Sparkles size={18}/><span><strong>Modo demostración.</strong> Todas las cifras y comidas son ficticias. Aún no existe conexión de datos reales con Garmin ni PostgreSQL.</span></div>
               <div className="metric-grid">
@@ -183,7 +189,7 @@ function App() {
               </div>
             </>}
 
-            {tab==="workout"&&<>
+            {liveState==="demo" && tab==="workout"&&<>
               <div className="intro"><span className="eyebrow">RUTINA VISUAL COMPLETA</span><h1>Tu entrenamiento<span className="neon-dot">.</span></h1><p>Todos los ejercicios en una sola página. Técnica, errores y cuidados permanecen desplegados.</p></div>
               <div className="demo-banner"><Sparkles size={18}/><span>Rutina ilustrativa: no es necesariamente tu entrenamiento programado en Garmin. Las animaciones son esquemas pendientes de validación técnica específica.</span></div>
               <div className="row-wrap badges"><span className="chip lime">FUERZA EN CASA</span><span className="chip">{workout.length} ejercicios</span><span className="chip">45–50 min</span><span className="chip">Registro real en Forerunner 955</span></div>
@@ -192,14 +198,14 @@ function App() {
               <Card className="hint-card"><Watch size={22}/><div><strong>Garmin sigue registrando el entrenamiento.</strong><p>Esta PWA es una guía visual; los datos efectivos se consultarán después de sincronizar el reloj. No registres las series dos veces.</p></div></Card>
             </>}
 
-            {tab==="food"&&<>
+            {liveState==="demo" && tab==="food"&&<>
               <div className="intro"><span className="eyebrow">ALIMENTACIÓN</span><h1>Comidas registradas<span className="neon-dot">.</span></h1><p>Historial de solo lectura. En la versión conectada, todo se ingresará desde ChatGPT.</p></div>
               <div className="demo-banner"><Utensils size={18}/><span>Ejemplos ficticios para probar el diseño. Ninguna comida ha sido guardada desde esta aplicación.</span></div>
               <Card className="food-chat"><div className="food-chat-icon"><Sparkles size={24}/></div><div><h2>Cuéntame lo que comiste en ChatGPT</h2><p>Ejemplo: «Comí tres huevos enteros, una palta pequeña y un vaso de leche cultivada». Guardaremos porciones confirmadas y estimaciones por separado cuando esté habilitado el MCP de alimentación.</p></div></Card>
               <div className="food-list">{[...history].reverse().map(d=><Card key={d.date} className="food-day"><div className="panel-heading"><h3><FormatDate date={d.date}/></h3><span className="chip">DEMO</span></div><div>{d.meals.map((m,i)=><div key={i} className="food-line"><span className="food-dot"/><span>{m}</span></div>)}</div><div className="food-totals">{d.protein===null?"Información nutricional incompleta":d.protein+" g de proteína · "+d.foodKcal+" kcal estimadas"}</div></Card>)}</div>
             </>}
 
-            {tab==="history"&&<>
+            {liveState==="demo" && tab==="history"&&<>
               <div className="intro"><span className="eyebrow">LÍNEA DE TIEMPO PERSONAL</span><h1>Histórico diario<span className="neon-dot">.</span></h1><p>Un día, una vista organizada: salud, ejercicio, alimentación y recuperación.</p></div>
               <div className="demo-banner"><CalendarDays size={18}/><span>Datos de muestra correspondientes a fechas ficticias; no reflejan tus registros personales de Garmin.</span></div>
               <Card className="date-card"><div className="date-control"><button aria-label="Día anterior" onClick={()=>changeDate(-1)} disabled={selectedDate===history[0].date}><ChevronLeft/></button><label htmlFor="selected-date"><span>Fecha seleccionada</span><input id="selected-date" type="date" value={selectedDate} min={history[0].date} max={history[history.length-1].date} onChange={e=>{if(history.some(d=>d.date===e.target.value))setSelectedDate(e.target.value);}}/></label><button aria-label="Día siguiente" onClick={()=>changeDate(1)} disabled={selectedDate===history[history.length-1].date}><ChevronRight/></button></div><div className="date-strip">{history.map(d=><button key={d.date} className={selected.date===d.date?"on":""} onClick={()=>setSelectedDate(d.date)}><small>{new Date(d.date+"T12:00:00").toLocaleDateString("es-CL",{weekday:"short"})}</small><strong>{d.date.slice(-2)}</strong><span className="date-dot"/></button>)}</div></Card>
@@ -215,7 +221,7 @@ function App() {
               {(historyTab==="food"||historyTab==="overview")&&<Card className="history-card"><h2><Utensils size={21}/> Alimentación</h2><ul className="food-history">{selected.meals.map((m,i)=><li key={i}>{m}</li>)}</ul><p className="muted">{selected.protein===null?"Sin datos nutricionales completos":selected.protein+" g proteína / "+selected.foodKcal+" kcal estimadas"}</p></Card>}
             </>}
 
-            {tab==="progress"&&<>
+            {liveState==="demo" && tab==="progress"&&<>
               <div className="intro"><span className="eyebrow">ANÁLISIS MULTIVARIABLE</span><h1>Progreso inteligente<span className="neon-dot">.</span></h1><p>16 comparaciones de entre 2 y 4 métricas para descubrir patrones, no solo cifras aisladas.</p></div>
               <div className="demo-banner"><Sparkles size={18}/><span>Los gráficos son muestras visuales, no resultados analíticos reales. Los comentarios personalizados llegarán cuando existan datos longitudinales suficientes.</span></div>
               <div className="metric-grid">
@@ -231,7 +237,7 @@ function App() {
               </div>
             </>}
 
-            {tab==="catalog"&&<>
+            {liveState==="demo" && tab==="catalog"&&<>
               <div className="intro"><span className="eyebrow">BIBLIOTECA DE EJERCICIOS</span><h1>Catálogo Garmin<span className="neon-dot">.</span></h1><p>Explora ejercicios mediante sus identificadores Garmin y filtra por categoría, músculo y equipamiento.</p></div>
               <div className="demo-banner"><BookOpen size={18}/><span>Muestra de {exerciseCatalog.length} fichas verificadas del catálogo Garmin (1.531 entradas consultables en el MCP). La integración dinámica completa se incorporará después.</span></div>
               <Card className="catalog-controls">

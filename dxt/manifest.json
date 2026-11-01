@@ -160,6 +160,30 @@
       "description": "Download a workout as a FIT file"
     },
     {
+      "name": "fitness_consultar_comidas",
+      "description": "Consultar historial persistido de comidas de Fitness Codapia."
+    },
+    {
+      "name": "fitness_consultar_historial",
+      "description": "Consultar juntos los días Garmin sincronizados, rutinas web y alimentación."
+    },
+    {
+      "name": "fitness_consultar_rutinas",
+      "description": "Consultar planes web creados, sin alterar sus equivalentes en Garmin."
+    },
+    {
+      "name": "fitness_guardar_rutina",
+      "description": "Crear o actualizar un plan de entrenamiento SOLO EN FITNESS CODAPIA."
+    },
+    {
+      "name": "fitness_registrar_comida",
+      "description": "Guardar en Fitness Codapia una comida informada por el usuario."
+    },
+    {
+      "name": "fitness_sincronizar_garmin",
+      "description": "Refrescar la caché de Fitness Codapia con datos reales de Garmin de una fecha."
+    },
+    {
       "name": "get_acclimation",
       "description": "Get heat and altitude acclimation status for a given date."
     },

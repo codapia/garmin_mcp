@@ -10,7 +10,7 @@ on:
 
 jobs:
   dependency-check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-24.04' || 'codapia-ci' }}
 
     steps:
     - name: Checkout code
@@ -39,7 +39,7 @@ jobs:
         fi
 
   code-quality:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-24.04' || 'codapia-ci' }}
 
     steps:
     - name: Checkout code
