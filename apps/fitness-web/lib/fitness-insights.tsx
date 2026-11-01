@@ -229,17 +229,17 @@ export function TrendExplorer({days,meals,date}:{
   const width=100+windowDays*84,height=382,left=70,top=50,base=315;
   const [lastChange,setLastChange]=useState("");
   function toggle(id:MetricId){
-    setSelected(old=>{
-      if(old.includes(id)){
-        setLastChange("Se quitó "+METRICS.find(m=>m.id===id)!.title+".");
-        return old.filter(v=>v!==id);
-      }
-      const next=old.length>=4?[...old.slice(1),id]:[...old,id];
-      setLastChange(old.length>=4?
-        "Se sustituyó "+METRICS.find(m=>m.id===old[0])!.title+" por "+METRICS.find(m=>m.id===id)!.title+".":
-        "Se añadió "+METRICS.find(m=>m.id===id)!.title+".");
-      return next;
-    });
+    const title=METRICS.find(m=>m.id===id)!.title;
+    if(selected.includes(id)){
+      setSelected(selected.filter(v=>v!==id));
+      setLastChange("Se quitó "+title+".");
+      return;
+    }
+    const replaced=selected.length>=4?selected[0]:null;
+    setSelected(replaced?[...selected.slice(1),id]:[...selected,id]);
+    setLastChange(replaced?
+      "Se sustituyó "+METRICS.find(m=>m.id===replaced)!.title+" por "+title+".":
+      "Se añadió "+title+".");
   }
   const hasRecords=series.some(s=>s.low!==null);
   const pointY=(n:number,s:(typeof series)[number])=>base-((n-(s.low??0))/s.span)*220-16;
