@@ -126,3 +126,37 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 .catalog-card .exercise-demo-image{height:175px}
 @media(max-width:760px){.exercise-demo-image{height:190px}.catalog-card .exercise-demo-image{height:180px}}
 @media(prefers-reduced-motion:reduce){.exercise-demo-image{transition:none}}
+
+
+/* Calendar of workouts, organized by day and training type */
+.workout-week-section{overflow:hidden}
+.workout-week-grid .meal-week-cell{min-height:124px}
+.workout-week-entry{display:flex;flex-direction:column;text-align:left;gap:7px;width:100%;border:1px solid #647d42;border-radius:10px;background:#344b2a;color:#f0f6e8;padding:9px 8px;cursor:pointer;margin-bottom:7px;min-width:0}
+.workout-week-entry:hover,.workout-week-entry:focus-visible{border-color:var(--lime);background:#476b30}
+.workout-week-entry strong{font-size:11px;line-height:1.45;overflow-wrap:anywhere}
+.workout-week-entry span{font-size:10px;color:#c1e3af}
+.workout-detail-heading{margin:24px 0 14px}
+.workout-detail-heading h2{font-size:20px}
+
+/* Explicit kilograms for planned loads, never represented as performed Garmin lifts */
+.exercise-load{border:1px solid #516447;background:#1a2b1e;border-radius:14px;padding:13px;margin:14px 0 17px}
+.exercise-load-current{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.exercise-load-current>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.exercise-load-current span{font-size:11px;color:#abc49e}
+.exercise-load-current strong{font-size:24px;font-weight:850;color:var(--lime)}
+.exercise-load-current small{font-size:11px;color:#b8c8b3;line-height:1.5}
+.exercise-load-current button{border:1px solid #667e58;background:#30462d;color:#dcedc7;border-radius:10px;padding:9px 11px;display:flex;gap:6px;align-items:center;white-space:nowrap;font-size:12px;font-weight:750;cursor:pointer}
+.exercise-load-current button:hover,.exercise-load-current button:focus-visible{border-color:var(--lime)}
+.exercise-load-form{display:grid;grid-template-columns:minmax(100px,1fr) minmax(120px,1fr) auto;gap:10px;align-items:end;margin-top:14px}
+.exercise-load-form label{font-size:11px;color:#c6d7c2;display:flex;flex-direction:column;gap:6px}
+.exercise-load-form input,.exercise-load-form select{min-width:0;max-width:100%;background:#1a261c;color:#f3f8ed;border:1px solid #65765c;border-radius:9px;padding:9px;font-size:13px}
+.exercise-load-form>button{border:1px solid #a9dd39;background:var(--lime);color:#12200c;border-radius:9px;display:flex;gap:7px;align-items:center;justify-content:center;padding:9px 10px;font-weight:800;font-size:12px;cursor:pointer}
+.exercise-load-form>button:disabled{opacity:.5;cursor:default}
+.exercise-load-form p{grid-column:1/-1;color:#aaba9e;font-size:10px;line-height:1.6;margin:0}
+.exercise-load-message{font-size:11px;color:#c5ddab;margin:10px 0 0}
+.catalog-demo-switch{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px}
+.catalog-demo-switch button{padding:10px 14px;border-radius:11px;border:1px solid #4b6046;background:#1b291c;color:#c8dec4;cursor:pointer;font-weight:700;font-size:12px}
+.catalog-demo-switch button.active{background:var(--lime);color:#15230e;border-color:var(--lime)}
+.catalog-demo-switch button:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+@media(max-width:760px){.exercise-load-form{grid-template-columns:1fr 1fr}.exercise-load-form>button{grid-column:1/-1}.workout-detail-heading{gap:10px}.exercise-load-current{flex-wrap:wrap}}
+@media(max-width:390px){.exercise-load-form{grid-template-columns:1fr}.exercise-load-form>button{grid-column:auto}}
