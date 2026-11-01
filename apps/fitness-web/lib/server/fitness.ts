@@ -82,6 +82,37 @@ export async function savePlan(payload:unknown){
   }catch(e){await client.query("ROLLBACK").catch(()=>{});throw e;}
   finally{client.release();}
 }
+/**
+ * Update a FITNESS-local planned load only. The original Garmin workout is
+ * never edited, replaced, rescheduled, or sent by this operation.
+ * The plan version guards concurrent edits from separate browser tabs.
+ */
+export async function saveExerciseLoad(payload:unknown){
+  const p=object(payload);
+  if(typeof p.plan_id!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.plan_id))
+    throw new Error("Identificador de plan inválido");
+  if(!Number.isInteger(p.expected_version)||!Number.isInteger(p.step_index)||
+     (p.step_index as number)<0||(p.step_index as number)>=40)
+    throw new Error("Versión o ejercicio inválido");
+  if(typeof p.kg!=="number"||!Number.isFinite(p.kg)||p.kg<0||p.kg>100)
+    throw new Error("La carga debe estar entre 0 y 100 kg");
+  if(p.scope!=="total"&&p.scope!=="per_hand")
+    throw new Error("Selecciona carga total o por mano");
+  const q=await db().query(`
+    UPDATE fitness_plans
+    SET steps=jsonb_set(steps,ARRAY[$2::text],
+      (steps -> $2::integer) || jsonb_build_object(
+        'fitness_load_kg',$3::numeric,'fitness_load_scope',$4::text,
+        'fitness_load_source','fitness_manual','fitness_load_status','planned'
+      ),false),
+      version=version+1,updated_at=now()
+    WHERE id=$1::uuid AND jsonb_array_length(steps)>$2::integer AND version=$5::integer
+    RETURNING id,version,steps
+  `,[p.plan_id,p.step_index,p.kg,p.scope,p.expected_version]);
+  if(!q.rows.length)throw new Error("La rutina cambió en otra sesión. Actualiza Fitness y vuelve a intentarlo.");
+  return {id:q.rows[0].id,version:q.rows[0].version,step_index:p.step_index,kg:p.kg,scope:p.scope};
+}
+
 export async function storeGarminDay(date:string){
   if(!validDay(date))throw new Error("Fecha inválida");
   const d=await fetchGarminDay(date);
