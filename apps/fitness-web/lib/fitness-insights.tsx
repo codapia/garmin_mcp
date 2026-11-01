@@ -47,6 +47,7 @@ export function DatePickerBar({date,period,onDate,onPeriod,availableDates}:{
   const dates=periodDates(date,period),start=dates[0],end=dates[dates.length-1];
   const history=Array.from(new Set(availableDates.map(d=>period==="week"?monday(d):d))).sort().reverse().slice(0,12);
   function step(dir:number){onDate(addDays(date,dir*(period==="week"?7:1)));}
+  function stepDay(dir:number){onDate(addDays(date,dir));}
   return <div className="period-panel">
     <div className="period-header">
       <div className="period-switch" role="group" aria-label="Período de consulta">
@@ -54,11 +55,16 @@ export function DatePickerBar({date,period,onDate,onPeriod,availableDates}:{
         <button type="button" className={period==="week"?"active":""} aria-pressed={period==="week"} onClick={()=>onPeriod("week")}>Semana</button>
       </div>
       <div className="period-nav">
-        <button type="button" onClick={()=>step(-1)} aria-label="Período anterior"><ChevronLeft size={18}/></button>
+        <button type="button" onClick={()=>step(-1)} aria-label={period==="week"?"Semana anterior":"Día anterior"} title={period==="week"?"Semana anterior":"Día anterior"}><ChevronLeft size={18}/></button>
         <span><CalendarDays size={17}/>{period==="day"?longDate(date):shortDate(start)+" — "+shortDate(end)}</span>
-        <button type="button" onClick={()=>step(1)} aria-label="Período siguiente"><ChevronRight size={18}/></button>
+        <button type="button" onClick={()=>step(1)} aria-label={period==="week"?"Semana siguiente":"Día siguiente"} title={period==="week"?"Semana siguiente":"Día siguiente"}><ChevronRight size={18}/></button>
       </div>
     </div>
+    {period==="week"&&<div className="day-stepper" role="group" aria-label="Navegación día por día">
+      <button type="button" onClick={()=>stepDay(-1)} aria-label="Retroceder un día" title="Día anterior"><ChevronLeft size={17}/> Un día</button>
+      <span>Día seleccionado: <strong>{longDate(date)}</strong></span>
+      <button type="button" onClick={()=>stepDay(1)} aria-label="Avanzar un día" title="Día siguiente">Un día <ChevronRight size={17}/></button>
+    </div>}
     <div className="period-shortcuts" aria-label="Fechas con registros">
       {history.map(d=><button key={d} type="button" className={(period==="week"?monday(date):date)===d?"selected":""}
         onClick={()=>onDate(d)}>{period==="week"?"Semana "+shortDate(d):shortDate(d)}</button>)}
@@ -68,13 +74,17 @@ export function DatePickerBar({date,period,onDate,onPeriod,availableDates}:{
 const slots=[
   {id:"morning",title:"Mañana",subtitle:"Desayuno"},
   {id:"noon",title:"Mediodía",subtitle:"Almuerzo"},
+  {id:"afternoon",title:"Tarde",subtitle:"Once confirmada"},
   {id:"night",title:"Noche",subtitle:"Cena"},
-  {id:"unknown",title:"Colaciones y otros",subtitle:"Horario no informado"}
+  {id:"unknown",title:"Sin horario",subtitle:"Colaciones y otros"}
 ] as const;
-function mealSlot(type:string){
-  if(type==="desayuno")return "morning";
-  if(type==="almuerzo")return "noon";
-  if(type==="cena")return "night";
+type MealSlotId=(typeof slots)[number]["id"];
+export function mealSlot(meal:Pick<MealRecord,"meal_type"|"description">):MealSlotId{
+  if(meal.meal_type==="desayuno")return "morning";
+  if(meal.meal_type==="almuerzo")return "noon";
+  if(meal.meal_type==="cena")return "night";
+  // La once sí identifica una franja. 'Colación' sin hora no implica 'tarde'.
+  if(/^once\b/i.test(meal.description.trim()))return "afternoon";
   return "unknown";
 }
 const val=(n:number|null,dec=0)=>n===null?"Sin estimar":n.toLocaleString("es-CL",{maximumFractionDigits:dec});
@@ -90,7 +100,7 @@ export function MealGroups({meals,dates,emptyMessage="Sin comidas registradas en
     </div>
     <div className="meal-slots">
       {slots.map(slot=>{
-        const items=section.items.filter(m=>mealSlot(m.meal_type)===slot.id);
+        const items=section.items.filter(m=>mealSlot(m)===slot.id);
         return <div className="meal-slot" key={slot.id}>
           <div className="meal-slot-heading"><h3>{slot.title}</h3><span>{slot.subtitle}</span></div>
           {items.length?items.map(m=><article key={m.id} className="meal-entry">
@@ -105,6 +115,47 @@ export function MealGroups({meals,dates,emptyMessage="Sin comidas registradas en
     </div>
     <p className="muted meal-day-note">Las colaciones se muestran aparte cuando no se conoce la hora. Un registro vacío no significa que no hayas comido.</p>
   </section>)}</div>;
+}
+
+function MealSummary({meal,compact=false}:{meal:MealRecord;compact?:boolean}){
+  return <article className={compact?"meal-entry meal-entry-compact":"meal-entry"}>
+    <p>{meal.description}</p>
+    <div className="meal-values">
+      <span>{val(meal.calories,1)}{meal.calories===null?" kcal":" kcal"}{meal.calories!==null&&meal.calories_estimated?" · estimado":""}</span>
+      <span>{val(meal.protein_g,1)}{meal.protein_g===null?" g proteína":" g proteína"}{meal.protein_g!==null&&meal.protein_estimated?" · estimado":""}</span>
+    </div>
+  </article>;
+}
+export function MealWeekGrid({meals,dates,selectedDate,onSelectDay}:{
+  meals:MealRecord[];dates:string[];selectedDate:string;onSelectDay:(date:string)=>void;
+}){
+  const days=dates.length===7?dates:periodDates(selectedDate,"week");
+  return <section className="panel meal-week-section">
+    <div className="meal-day-heading"><h2><Utensils size={20}/> Calendario semanal</h2>
+      <span>De lunes a domingo · pulsa un día para ver su detalle</span>
+    </div>
+    <div className="meal-week-scroll" role="region" tabIndex={0} aria-label="Calendario semanal de comidas; desplazable horizontalmente">
+      <div className="meal-week-grid" role="table" aria-label="Comidas por día de la semana y franja">
+        <div className="week-corner" role="columnheader">Franja</div>
+        {days.map(d=><button type="button" role="columnheader" key={d}
+          aria-label={"Ver comidas de "+longDate(d)} aria-current={selectedDate===d?"date":undefined}
+          className={"week-col-heading "+(selectedDate===d?"chosen":"")} onClick={()=>onSelectDay(d)}>
+          <strong>{new Date(d+"T12:00:00Z").toLocaleDateString("es-CL",{weekday:"short"})}</strong>
+          <span>{shortDate(d)}</span>
+        </button>)}
+        {slots.map(slot=><div key={slot.id} role="row" className="meal-week-row">
+          <div className="week-row-label" role="rowheader"><strong>{slot.title}</strong><small>{slot.subtitle}</small></div>
+          {days.map(d=>{const items=meals.filter(m=>m.date===d&&mealSlot(m)===slot.id);
+            return <div role="cell" className={"meal-week-cell "+(selectedDate===d?"current":"")} key={d+slot.id}>
+              {items.length?items.map(m=><MealSummary key={m.id} meal={m} compact/>):
+                <span className="week-cell-empty" aria-label={"Sin registro para "+slot.title+" el "+d}>—</span>}
+            </div>;
+          })}
+        </div>)}
+      </div>
+    </div>
+    <p className="muted meal-day-note">Las comidas sin horario confirmado quedan en «Sin horario»; una celda vacía no implica que no hayas comido. Desliza horizontalmente en pantallas pequeñas.</p>
+  </section>;
 }
 type MetricId="sleep"|"sleepScore"|"battery"|"batteryCurrent"|"readiness"|"hrv"|"restHr"|"stress"|"steps"|"activeKcal"|"trainingMin"|"calories"|"protein";
 const COLORS=["#b8ff17","#61d8ff","#d68cff","#ffbf69","#ff7cae","#82efb8"];
@@ -133,6 +184,7 @@ function readinessScore(input:unknown):number|null{
 function activityMinutes(input:unknown):number|null{
   const value=Array.isArray(input)?input:record(input).activities;
   if(!Array.isArray(value))return null;
+  // Array vacío explícito significa 0 minutos, no un dato ausente.
   return value.reduce<number>((sum,item)=>{
     const n=field(item,["duration_seconds","durationSeconds","duration"]);
     return sum+(n===null?0:n/60);
@@ -172,17 +224,28 @@ export function TrendExplorer({days,meals,date}:{
     const low=available.length?Math.min(...available):null;
     const high=available.length?Math.max(...available):null;
     const span=low!==null&&high!==null?Math.max(high-low,Math.max(1,Math.abs(high))*0.08):1;
-    return {...cfg,color:COLORS[i%COLORS.length],values,low,high,span};
+    return {...cfg,color:COLORS[i%COLORS.length],values,low,high,span,measuredDays:available.length};
   }),[selected,dates,byDate,meals]);
   const width=100+windowDays*84,height=382,left=70,top=50,base=315;
+  const [lastChange,setLastChange]=useState("");
   function toggle(id:MetricId){
-    setSelected(old=>old.includes(id)?old.filter(v=>v!==id):old.length>=4?old:[...old,id]);
+    const title=METRICS.find(m=>m.id===id)!.title;
+    if(selected.includes(id)){
+      setSelected(selected.filter(v=>v!==id));
+      setLastChange("Se quitó "+title+".");
+      return;
+    }
+    const replaced=selected.length>=4?selected[0]:null;
+    setSelected(replaced?[...selected.slice(1),id]:[...selected,id]);
+    setLastChange(replaced?
+      "Se sustituyó "+METRICS.find(m=>m.id===replaced)!.title+" por "+title+".":
+      "Se añadió "+title+".");
   }
   const hasRecords=series.some(s=>s.low!==null);
   const pointY=(n:number,s:(typeof series)[number])=>base-((n-(s.low??0))/s.span)*220-16;
   return <section className="panel trend-explorer">
     <div className="insight-heading"><div><span className="eyebrow">EVOLUCIÓN EN EL TIEMPO</span><h2><TrendingUp size={21}/> Comparador de indicadores</h2>
-      <p className="muted">Selecciona hasta 4 métricas y compáralas sobre los mismos días.</p></div>
+      <p className="muted">Selecciona hasta 4 métricas. Si añades una quinta, se sustituirá automáticamente la más antigua.</p></div>
       <div className="period-switch" role="group" aria-label="Días en la gráfica">
         {([7,30,90] as const).map(v=><button type="button" key={v} className={windowDays===v?"active":""} aria-pressed={windowDays===v} onClick={()=>setWindowDays(v)}>{v} días</button>)}
       </div>
@@ -193,16 +256,19 @@ export function TrendExplorer({days,meals,date}:{
           <h3>{group}</h3>{METRICS.filter(m=>m.group===group).map(m=>{
             const index=selected.indexOf(m.id);
             const current=series.find(s=>s.id===m.id);
+            const measured=dates.map(d=>metricValue(m.id,d,byDate.get(d),meals)).filter(n=>n!==null).length;
             return <button key={m.id} type="button" aria-pressed={index>=0} className={"trend-metric "+(index>=0?"on":"")}
-              onClick={()=>toggle(m.id)} title={index<0&&selected.length>=4?"Quita una métrica para añadir otra":m.title}>
+              onClick={()=>toggle(m.id)} title={index<0&&selected.length>=4?"Se sustituirá la métrica seleccionada más antigua":m.title}>
               <span className="trend-swatch" style={{background:index>=0?COLORS[index%COLORS.length]:"transparent",borderColor:index>=0?COLORS[index%COLORS.length]:"#5c695e"}}/>
-              <span>{m.title}<small>{current?.low!==null&&current?.low!==undefined?val(current.low,1)+"–"+val(current.high,1)+" "+m.unit:m.unit}</small></span>
+              <span>{m.title}<small>{measured+"/"+dates.length+" días con dato"+(measured===0?" · sin registros":"")}</small>{index>=0&&current?.low!==null&&current?.low!==undefined&&<small>{val(current.low,1)+"–"+val(current.high,1)+" "+m.unit}</small>}</span>
             </button>;
           })}</div>)}
-        <p className="muted">Los indicadores sin mediciones se omiten de la gráfica. Quita uno para elegir otro.</p>
+        <p className="muted">Selecciona cualquier indicador. Con cuatro activos, el siguiente reemplaza al primero.</p>
       </aside>
       <div className="trend-main">
-        <div className="trend-legend">{series.map(s=><span key={s.id} style={{color:s.color}}><i style={{background:s.color}}/>{s.title} ({s.unit})</span>)}</div>
+        <div className="trend-legend">{series.map(s=><span key={s.id} style={{color:s.color}}><i style={{background:s.color}}/>{s.title} ({s.unit}) · {s.measuredDays}/{dates.length} días</span>)}</div>
+        <p className="muted trend-feedback" role="status" aria-live="polite">{lastChange||"Elige una métrica en el panel lateral para mostrarla en el gráfico."}</p>
+        {series.filter(s=>s.measuredDays===0).map(s=><p key={s.id} className="trend-missing">{s.title}: no hay datos para este intervalo. Prueba otra fecha o sincroniza Garmin.</p>)}
         {!hasRecords?<div className="trend-no-data">No hay registros de las métricas seleccionadas dentro de este período.</div>:
         <div className="trend-scroll" role="region" tabIndex={0} aria-label="Gráfica horizontal desplazable con fechas, métricas y valores">
           <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={"Evolución de "+series.map(s=>s.title).join(", ")}>
@@ -233,7 +299,7 @@ export function TrendExplorer({days,meals,date}:{
             })}
           </svg>
         </div>}
-        <p className="muted trend-footnote">Eje horizontal: días. Eje vertical: escala relativa de cada serie (0–100 % de su rango observado), no unidades compartidas. Las cifras sobre los puntos y las escalas de la izquierda conservan las unidades reales. Huecos = datos faltantes; no equivalen a cero. Body Battery «última lectura» puede ser parcial.</p>
+        <p className="muted trend-footnote">Eje horizontal: días. Eje vertical: posición normalizada por métrica (0–100 % de su rango), no unidades compartidas. El valor de cada punto conserva sus unidades originales. Huecos = información faltante, no cero. Las calorías y proteínas suman solo las comidas registradas y pueden ser estimaciones o totales parciales. Body Battery «última lectura» puede ser parcial.</p>
       </div>
     </div>
   </section>;

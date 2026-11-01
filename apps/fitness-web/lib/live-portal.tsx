@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Activity, CalendarDays, CheckCircle2, Dumbbell, HeartPulse, Moon, RefreshCcw, Search, Utensils, ShieldCheck, TrendingUp, AlertTriangle } from "lucide-react";
-import { DatePickerBar, MealGroups, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
+import { DatePickerBar, MealGroups, MealWeekGrid, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
 
 type Tab="home"|"workout"|"food"|"history"|"progress"|"catalog";
 type Day={
@@ -191,8 +191,9 @@ export default function LivePortal({tab}:{tab:Tab}){
           <p className="muted">Demostración técnica por incorporar y validar para este ejercicio Garmin exacto; no se mostrará un GIF genérico engañoso.</p>
         </article>)}</div>
     </>}
-    {tab==="food"&&<><p className="muted">{periodCaption} · Las comidas se separan según la franja informada, sin inventar horarios.</p>
-      <MealGroups meals={todaysMeals} dates={activeDates}/>
+    {tab==="food"&&<><p className="muted">{periodCaption} · En la vista semanal, cada columna es un día y cada fila una franja de comida.</p>
+      {period==="week"?<MealWeekGrid meals={todaysMeals} dates={activeDates} selectedDate={date} onSelectDay={setDate}/>:
+        <MealGroups meals={todaysMeals} dates={activeDates}/>}
     </>}
     {tab==="history"&&<>
       <p className="muted">{periodCaption} · Selecciona Día o Semana arriba para cambiar el período.</p>
