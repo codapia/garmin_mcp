@@ -2,6 +2,7 @@
 
 import {useEffect,useMemo,useState} from "react";
 import {Dumbbell,Search,ShieldAlert,ChevronDown} from "lucide-react";
+import {ExerciseDemo} from "./exercise-demo";
 
 /**
  * Source: hasaneyldrm/exercises-dataset (exercise metadata and Spanish instruction text, MIT).
@@ -9,6 +10,17 @@ import {Dumbbell,Search,ShieldAlert,ChevronDown} from "lucide-react";
  * © Gym visual, third-party license required for Fitness Codapia.
  */
 type Exercise={id:string;n:string;c:string;b:string;e:string;t:string;m:string;s:string[];es:string};
+// Verified matching IDs and exercise names in both datasets; artwork is the
+// separately licensed Flow SVG sequence already bundled with Fitness.
+const EXISTING_FLOW_DEMOS:Record<string,[string,string]>={
+  "1760":["SQUAT","GOBLET_SQUAT"],"0381":["LUNGE","DUMBBELL_REVERSE_LUNGE"],
+  "1379":["CALF_RAISE","WEIGHTED_SEATED_CALF_RAISE"],"0276":["HIP_STABILITY","DEAD_BUG"],
+  "0289":["BENCH_PRESS","DUMBBELL_BENCH_PRESS"],"0314":["BENCH_PRESS","INCLINE_DUMBBELL_BENCH_PRESS"],
+  "0315":["CURL","INCLINE_DUMBBELL_BICEPS_CURL"],"0351":["TRICEPS_EXTENSION","DUMBBELL_LYING_TRICEPS_EXTENSION"],
+  "1459":["DEADLIFT","ROMANIAN_DEADLIFT"],"0405":["SHOULDER_PRESS","DUMBBELL_SHOULDER_PRESS"],
+  "3144":["BANDED_EXERCISES","ROW"],"3123":["BANDED_EXERCISES","CURL"]
+};
+
 type Region="chest"|"abs"|"shoulders"|"upperarms"|"forearms"|"upperback"|"lowerback"|"hips"|"thighs"|"calves";
 const MAPPING:Record<string,Region[]>={
   abs:["abs"],abdominals:["abs"],core:["abs"],obliques:["abs"],"lower abs":["abs"],
@@ -84,6 +96,10 @@ function ExerciseCard({entry}:{entry:Exercise}){
     <div className="ext-card-top"><span className="chip lime">{es(entry.c)}</span><span className="ext-id">#{entry.id}</span></div>
     <h3>{entry.n}</h3>
     <p className="muted">{es(entry.e)} · {es(entry.b)}</p>
+    {EXISTING_FLOW_DEMOS[entry.id]&&<div className="ext-flow-preview">
+      <ExerciseDemo category={EXISTING_FLOW_DEMOS[entry.id][0]} exerciseName={EXISTING_FLOW_DEMOS[entry.id][1]} label={entry.n}/>
+      <span>Demostración Flow (SVG orientativo), distinta de los GIFs de Gym visual.</span>
+    </div>}
     <MuscleMap entry={entry}/>
     <div className="muscle-labels"><div><strong>Principal</strong><span>{es(entry.t)}</span></div>
       <div><strong>Secundarios</strong><span>{[...new Set([entry.m,...entry.s])].filter(x=>x&&x!==entry.t).map(es).join(", ")||"No especificados"}</span></div>
@@ -92,7 +108,7 @@ function ExerciseCard({entry}:{entry:Exercise}){
       Cómo se hace (español) <ChevronDown size={16} className={open?"open":""}/>
     </button>
     {open&&<p className="exercise-instructions">{entry.es||"Sin instrucciones traducidas."}</p>}
-    <p className="ext-media-note">GIF anatómico © Gym visual: pendiente de autorización para reproducirlo en Fitness. Los datos e instrucciones son MIT.</p>
+    <p className="ext-media-note">GIF anatómico © Gym visual: requiere autorización adicional. Los datos e instrucciones son MIT; si aparece una animación, corresponde a la biblioteca Flow ya integrada.</p>
   </article>;
 }
 export default function ExercisesDatasetCatalog(){
