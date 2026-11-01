@@ -38,6 +38,9 @@ ADDITIVE_TOOLS = frozenset(
         "upload_course",
         "upload_workout",
         "upload_workouts",
+        "fitness_registrar_comida",
+        "fitness_guardar_rutina",
+        "fitness_sincronizar_garmin",
         "upsert_and_log",
     }
 )
@@ -206,6 +209,9 @@ READ_ONLY_TOOLS = frozenset(
         "get_workout_by_id",
         "get_workouts",
         "search_foods",
+        "fitness_consultar_comidas",
+        "fitness_consultar_historial",
+        "fitness_consultar_rutinas",
     }
 )
 

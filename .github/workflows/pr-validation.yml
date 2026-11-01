@@ -6,7 +6,7 @@ on:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-24.04' || 'codapia-ci' }}
 
     steps:
     - name: Checkout code
@@ -42,7 +42,7 @@ jobs:
       run: uv run python -c "import tomllib; tomllib.load(open('pyproject.toml', 'rb'))"
 
   test-installation:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-24.04' || 'codapia-ci' }}
 
     steps:
     - name: Checkout code
@@ -58,7 +58,7 @@ jobs:
         uv run garmin-mcp --help || echo "CLI help command check"
 
   pr-info:
-    runs-on: ubuntu-latest
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-24.04' || 'codapia-ci' }}
     if: github.event_name == 'pull_request'
 
     steps:

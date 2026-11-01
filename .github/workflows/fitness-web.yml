@@ -1,0 +1,79 @@
+name: Fitness PWA validation
+on:
+  pull_request:
+    paths: [apps/fitness-web/**, docker-compose.fitness.yml, src/garmin_mcp/fitness_web.py, .github/workflows/fitness-web.yml]
+  push:
+    branches: [main]
+    paths: [apps/fitness-web/**, docker-compose.fitness.yml, src/garmin_mcp/fitness_web.py, .github/workflows/fitness-web.yml]
+permissions:
+  contents: read
+jobs:
+  db-integration:
+    # GitHub-hosted only for isolated PostgreSQL network compatibility.
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_USER: fitness
+          POSTGRES_DB: fitness
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fitness -d fitness"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: npm install --no-audit --no-fund
+        working-directory: apps/fitness-web
+      - run: npm run test:db
+        working-directory: apps/fitness-web
+        env:
+          TEST_DATABASE_URL: postgresql://fitness:ci-only-password@127.0.0.1:5432/fitness
+
+  build:
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-24.04' || 'codapia-ci' }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Install
+        working-directory: apps/fitness-web
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        working-directory: apps/fitness-web
+        run: npm run typecheck
+      - name: Build
+        working-directory: apps/fitness-web
+        run: npm run build
+      - name: Setup Docker Compose on isolated runner
+        uses: docker/setup-compose-action@v1
+      - name: Validate isolated Compose
+        env:
+          FITNESS_DB_PASSWORD: ci-only-database-pass
+          FITNESS_CF_ACCESS_TEAM_DOMAIN: test.cloudflareaccess.com
+          FITNESS_CF_ACCESS_AUD: ci-fake-app-audience
+          FITNESS_INTERNAL_TOKEN: ci-fake-private-token
+          FITNESS_GARMIN_MCP_HTTP_TOKEN: ci-fake-garmin-token
+        run: |
+          docker compose -f docker-compose.fitness.yml config --format json > /tmp/fitness-compose.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/fitness-compose.json',encoding='utf-8'))
+          assert set(d['services'])=={'fitness-web','fitness-db'}
+          web,db=d['services']['fitness-web'],d['services']['fitness-db']
+          assert web['user']=='10001:10001'
+          assert web['read_only'] is True
+          assert 'ALL' in web['cap_drop']
+          assert web['ports'][0]['host_ip']=='127.0.0.1'
+          assert int(web['ports'][0]['published'])==18081
+          assert not db.get('ports')
+          print('Fitness isolated from Garmin MCP')
+          PY

@@ -1,0 +1,69 @@
+# Fitness Codapia is an independent Coolify resource, never replace Garmin MCP.
+# REQUIRE Cloudflare Access before publishing fitness.codapia.cl.
+services:
+  fitness-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fitness
+      POSTGRES_USER: fitness
+      POSTGRES_PASSWORD: "${FITNESS_DB_PASSWORD:?Set database password in Coolify}"
+    volumes:
+      - fitness_data:/var/lib/postgresql/data
+      - ./apps/fitness-web/db/001-schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    networks: [fitness_private]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitness -d fitness"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    security_opt:
+      - no-new-privileges:true
+
+  fitness-web:
+    build:
+      context: ./apps/fitness-web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 768m
+    cpus: "1.0"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      PGHOST: fitness-db
+      PGPORT: "5432"
+      PGDATABASE: fitness
+      PGUSER: fitness
+      PGPASSWORD: "${FITNESS_DB_PASSWORD:?Set database password in Coolify}"
+      CF_ACCESS_TEAM_DOMAIN: "${FITNESS_CF_ACCESS_TEAM_DOMAIN:?Set Cloudflare team domain}"
+      CF_ACCESS_AUD: "${FITNESS_CF_ACCESS_AUD:?Set Cloudflare Access application audience}"
+      FITNESS_INTERNAL_TOKEN: "${FITNESS_INTERNAL_TOKEN:?Set independent Fitness API token}"
+      GARMIN_MCP_URL: "${FITNESS_GARMIN_MCP_URL:-https://garmin.codapia.cl/mcp}"
+      GARMIN_MCP_HTTP_TOKEN: "${FITNESS_GARMIN_MCP_HTTP_TOKEN:?Set protected Garmin upstream token}"
+    ports: ["127.0.0.1:18081:3000"]
+    networks: [fitness_private]
+    depends_on:
+      fitness-db:
+        condition: service_healthy
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+networks:
+  fitness_private:
+    driver: bridge
+volumes:
+  fitness_data:
