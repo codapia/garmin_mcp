@@ -48,3 +48,9 @@ Los gráficos y cruces de sueño, VFC, estrés, alimentación, carga y progreso 
 - El primer paso de conexión no implica sincronización histórica automática; refrescar día por día y, luego, crear un worker programado.
 - La instalación inicial de PostgreSQL ejecuta `001-schema.sql` una sola vez; cambios futuros requieren migraciones versionadas y verificación.
 - No hay videos oficiales Garmin: el catálogo devuelve identificadores y equipamiento, no medios técnicos específicos.
+
+## Cloudflare Tunnel: origen del botón Actualizar Garmin
+
+El POST de navegador `POST /api/fitness/sync` compara el encabezado `Origin` contra `https://fitness.codapia.cl` (predeterminado) y no contra `req.nextUrl.origin`: detrás de Cloudflare Tunnel este último puede ser una dirección del contenedor. La comparación es **exacta** y rechaza orígenes ausentes o ajenos. Opcionalmente se puede establecer `FITNESS_PUBLIC_ORIGIN` para entornos de prueba o un cambio explícito del hostname. No hay que modificar esa variable para el despliegue de producción actual.
+
+Prueba: `npm run test:origin` (integrada en el CI). El endpoint sigue requiriendo JWT firmado de Cloudflare Access, y la API máquina-a-máquina utiliza una ruta separada.
