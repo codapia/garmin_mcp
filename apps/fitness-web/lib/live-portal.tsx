@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Activity, CalendarDays, CheckCircle2, Dumbbell, HeartPulse, Moon, RefreshCcw, Search, Utensils, ShieldCheck, TrendingUp, AlertTriangle } from "lucide-react";
 import { DatePickerBar, MealGroups, MealWeekGrid, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
 import { ExerciseDemo, EXERCISE_DEMO_LIBRARY, hasExerciseDemo } from "./exercise-demo";
+import { AnatomyLibrary } from "./anatomy-catalog";
 import { ExerciseLoad, WorkoutWeekGrid, loadDisplay, type WorkoutPlan } from "./workout-week";
 
 type Tab="home"|"workout"|"food"|"history"|"progress"|"catalog";
@@ -85,6 +86,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   const [total,setTotal]=useState(0);
   const [catalogError,setCatalogError]=useState("");
   const [demoOnly,setDemoOnly]=useState(true);
+  const [anatomyMode,setAnatomyMode]=useState(true);
   async function load(){
     setLoading(true);
     try{
@@ -96,7 +98,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   }
   useEffect(()=>{void load();},[]);
   useEffect(()=>{
-    if(tab!=="catalog"||demoOnly)return;
+    if(tab!=="catalog"||demoOnly||anatomyMode)return;
     const controller=new AbortController();
     const timer=setTimeout(async()=>{
       try{
@@ -107,7 +109,7 @@ export default function LivePortal({tab}:{tab:Tab}){
       }catch(e){if(!controller.signal.aborted)setCatalogError(e instanceof Error?e.message:"Error");}
     },280);
     return ()=>{clearTimeout(timer);controller.abort();};
-  },[tab,query,category,muscle,equipment,demoOnly]);
+  },[tab,query,category,muscle,equipment,demoOnly,anatomyMode]);
   const byDay=useMemo(()=>new Map((data?.days||[]).map(d=>[d.date,d])),[data]);
   const chosen=byDay.get(date);
   const activeDates=periodDates(date,period);
@@ -155,7 +157,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   if(loading&&!data)return <div className="panel"><p>Consultando historial privado…</p></div>;
   if(error&&!data)return <div className="panel"><h2>Error de conexión</h2><p>{error}</p><button className="neon-button" onClick={load}>Reintentar</button></div>;
   return <div className="live-content">
-    <div className="intro"><span className="eyebrow">DATOS PERSISTENTES · FITNESS CODAPIA</span><h1>{{home:"Tu día",workout:"Rutina completa",food:"Alimentación",history:"Histórico diario",progress:"Progreso cruzado",catalog:"Catálogo Garmin"}[tab]}<span className="neon-dot">.</span></h1>
+    <div className="intro"><span className="eyebrow">DATOS PERSISTENTES · FITNESS CODAPIA</span><h1>{{home:"Tu día",workout:"Rutina completa",food:"Alimentación",history:"Histórico diario",progress:"Progreso cruzado",catalog:"Catálogo de ejercicios"}[tab]}<span className="neon-dot">.</span></h1>
       <p>Garmin es la fuente de las actividades realizadas. Las comidas y los planes se almacenan en tu propia base de datos.</p>
     </div>
     {error&&<div className="demo-banner"><AlertTriangle size={17}/>{error}</div>}
@@ -238,8 +240,8 @@ export default function LivePortal({tab}:{tab:Tab}){
       <TrendExplorer days={days} meals={data?.meals||[]} date={date}/>
     </>}
     {tab==="catalog"&&<>
-      <div className="panel catalog-controls"><div className="catalog-demo-switch" role="group" aria-label="Disponibilidad de animaciones"><button type="button" className={demoOnly?"active":""} aria-pressed={demoOnly} onClick={()=>setDemoOnly(true)}>Con animación ({EXERCISE_DEMO_LIBRARY.length})</button><button type="button" className={!demoOnly?"active":""} aria-pressed={!demoOnly} onClick={()=>setDemoOnly(false)}>Todos los ejercicios</button></div><div className="search-input"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar nombre Garmin o español…"/></div><div className="filter-grid"><label>Categoría<input placeholder="Ej. BENCH_PRESS" value={category} onChange={e=>setCategory(e.target.value)}/></label><label>Músculo<input placeholder="Ej. CHEST" value={muscle} onChange={e=>setMuscle(e.target.value)}/></label><label>Equipamiento<input placeholder="Ej. DUMBBELL" value={equipment} onChange={e=>setEquipment(e.target.value)}/></label></div><p className="muted">{demoOnly?"Mostrando "+visibleDemoExercises.length+" de "+EXERCISE_DEMO_LIBRARY.length+" demostraciones disponibles. El resto del catálogo aún no tiene animación específica.":catalogError||total+" coincidencias Garmin; mostrando "+catalog.length+" (primero los disponibles con animación)."}</p></div>
-      <div className="catalog-grid">{shownCatalog.map(e=><div className="panel catalog-card" key={e.category+"/"+e.exercise_name}><span className="chip lime">{e.category}</span><h3>{e.name_es||e.name_en}</h3><p className="muted">{e.name_en}</p><ExerciseDemo category={e.category} exerciseName={e.exercise_name} label={e.name_es||e.name_en}/><p>{e.primary_muscles.join(", ")||"Músculo no especificado"}</p><p className="muted">{e.equipment.join(", ")||"Equipo no especificado"}</p><span className="chip">{e.exercise_name}</span></div>)}</div>
+      <div className="panel catalog-controls"><div className="catalog-demo-switch" role="group" aria-label="Biblioteca de ejercicios"><button type="button" className={anatomyMode?"active":""} aria-pressed={anatomyMode} onClick={()=>setAnatomyMode(true)}>Anatomía y músculos (1.324)</button><button type="button" className={!anatomyMode&&demoOnly?"active":""} aria-pressed={!anatomyMode&&demoOnly} onClick={()=>{setAnatomyMode(false);setDemoOnly(true);}}>Con animación ({EXERCISE_DEMO_LIBRARY.length})</button><button type="button" className={!anatomyMode&&!demoOnly?"active":""} aria-pressed={!anatomyMode&&!demoOnly} onClick={()=>{setAnatomyMode(false);setDemoOnly(false);}}>Todos Garmin</button></div><div className="search-input"><Search size={20}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Buscar ejercicio, músculos o técnica…"/></div><div className="filter-grid"><label>Categoría<input placeholder="Ej. pecho, waist o BENCH_PRESS" value={category} onChange={e=>setCategory(e.target.value)}/></label><label>Músculo<input placeholder="Ej. pectorales, biceps o CHEST" value={muscle} onChange={e=>setMuscle(e.target.value)}/></label><label>Equipamiento<input placeholder="Ej. mancuerna, dumbbell o banda" value={equipment} onChange={e=>setEquipment(e.target.value)}/></label></div><p className="muted">{anatomyMode?"Biblioteca anatómica independiente de Garmin: músculos principales/secundarios e instrucciones en español. No incluye GIFs propietarios.":demoOnly?"Mostrando "+visibleDemoExercises.length+" de "+EXERCISE_DEMO_LIBRARY.length+" demostraciones disponibles. El resto del catálogo aún no tiene animación específica.":catalogError||total+" coincidencias Garmin; mostrando "+catalog.length+" (primero los disponibles con animación)."}</p></div>
+      {anatomyMode?<AnatomyLibrary query={query} category={category} muscle={muscle} equipment={equipment}/>:<div className="catalog-grid">{shownCatalog.map(e=><div className="panel catalog-card" key={e.category+"/"+e.exercise_name}><span className="chip lime">{e.category}</span><h3>{e.name_es||e.name_en}</h3><p className="muted">{e.name_en}</p><ExerciseDemo category={e.category} exerciseName={e.exercise_name} label={e.name_es||e.name_en}/><p>{e.primary_muscles.join(", ")||"Músculo no especificado"}</p><p className="muted">{e.equipment.join(", ")||"Equipo no especificado"}</p><span className="chip">{e.exercise_name}</span></div>)}</div>}
     </>}
   </div>;
 }
