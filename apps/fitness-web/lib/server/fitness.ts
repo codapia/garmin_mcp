@@ -81,7 +81,7 @@ export async function storeGarminDay(date:string){
       scheduled_workouts=COALESCE(EXCLUDED.scheduled_workouts,fitness_garmin_days.scheduled_workouts),
       sync_warnings=EXCLUDED.sync_warnings,synced_at=now()
     RETURNING day::text AS date,synced_at,sync_warnings`,
-    [date,...["daily_stats","sleep","hrv","readiness","activities","scheduled_workouts"].map(k=>d[k]==null?null:JSON.stringify(d[k])),
+    [date,...["daily_stats","sleep","hrv","readiness","activities","scheduled_workouts"].map(k=>{const value=(d as Record<string,unknown>)[k];return value==null?null:JSON.stringify(value);}),
       JSON.stringify(d.warnings)]);
   return result.rows[0];
 }

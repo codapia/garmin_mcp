@@ -127,7 +127,7 @@ export default function LivePortal({tab}:{tab:Tab}){
     </div>
     {error&&<div className="demo-banner"><AlertTriangle size={17}/>{error}</div>}
     {tab!=="catalog"&&<div className="live-toolbar panel"><label>Fecha <input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="neon-button" disabled={syncing} onClick={sync}><RefreshCcw size={17} className={syncing?"spin":""}/>{syncing?"Sincronizando…":"Actualizar Garmin"}</button><span className="muted">Última lectura: {chosen?new Date(chosen.synced_at).toLocaleString("es-CL"):"Sin sincronizar"}</span></div>}
-    {chosen?.sync_warnings?.length>0&&<div className="demo-banner"><AlertTriangle size={17}/>Se conservaron los datos disponibles. Algunas métricas no respondieron: {chosen.sync_warnings.join("; ")}</div>}
+    {(chosen?.sync_warnings?.length ?? 0)>0&&<div className="demo-banner"><AlertTriangle size={17}/>Se conservaron los datos disponibles. Algunas métricas no respondieron: {chosen?.sync_warnings?.join("; ")}</div>}
     {tab==="home"&&<>
       <div className="metric-grid">
         <Kpi label="Pasos" number={metric(chosen,"pasos")}/>
