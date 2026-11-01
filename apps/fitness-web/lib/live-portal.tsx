@@ -73,7 +73,7 @@ export default function LivePortal({tab}:{tab:Tab}){
   const [sendingPlan,setSendingPlan]=useState<string|null>(null);
   const [sendMessage,setSendMessage]=useState("");
   const [date,setDate]=useState(chileDay);
-  const [period,setPeriod]=useState<Period>("day");
+  const [period,setPeriod]=useState<Period>(tab==="food"?"week":"day");
   const [detail,setDetail]=useState("Resumen");
   const [query,setQuery]=useState("");
   const [category,setCategory]=useState("");
