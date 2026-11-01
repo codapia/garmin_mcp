@@ -117,6 +117,21 @@ def register_tools(app):
         return json.dumps(result,ensure_ascii=False)
 
     @app.tool()
+    async def fitness_enviar_rutina_garmin(plan_id: str, expected_version: int) -> str:
+        """Programar una rutina ya guardada en Fitness, en Garmin Connect.
+
+        Usa el ID y la versión de fitness_consultar_rutinas; conserva la referencia
+        Garmin y es seguro reintentar la programación sin duplicar el workout.
+        No elimina ni reemplaza rutinas Garmin preexistentes.
+        """
+        result = await asyncio.to_thread(
+            fitness_request,
+            {"action": "send_plan",
+             "payload": {"plan_id": plan_id, "expected_version": expected_version}},
+        )
+        return json.dumps(result, ensure_ascii=False)
+
+    @app.tool()
     async def fitness_sincronizar_garmin(date: str) -> str:
         """Refrescar la caché de Fitness Codapia con datos reales de Garmin de una fecha.
 
