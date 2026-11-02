@@ -5,6 +5,7 @@ import { Activity, CalendarDays, CheckCircle2, Dumbbell, HeartPulse, Moon, Refre
 import { DatePickerBar, MealGroups, MealWeekGrid, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
 import { ExerciseDemo, EXERCISE_DEMO_LIBRARY, hasExerciseDemo } from "./exercise-demo";
 import { ExerciseLoad, WorkoutWeekGrid, loadDisplay, type WorkoutPlan } from "./workout-week";
+import { activitiesFromGarmin, visibleWorkoutPlans, pendingWorkoutPlans, hasSyncedActivityData, planConfirmedByGarmin } from "./workout-reconciliation";
 import ExercisesDatasetCatalog from "./exercises-dataset-catalog";
 
 type Tab="home"|"workout"|"food"|"history"|"progress"|"catalog";
@@ -114,10 +115,16 @@ export default function LivePortal({tab}:{tab:Tab}){
   const chosen=byDay.get(date);
   const activeDates=periodDates(date,period);
   const activeSet=new Set(activeDates);
-  const todaysPlans=(data?.plans||[]).filter(p=>activeSet.has(p.date));
+  // Only activities with real Garmin IDs count as completed exercise.
+  const actualActivities=activitiesFromGarmin(data?.days||[]);
+  const verifiedPlans=visibleWorkoutPlans(data?.plans||[],actualActivities,chileDay());
+  const pendingPlans=pendingWorkoutPlans(data?.plans||[],actualActivities,chileDay());
+  const todaysPlans=verifiedPlans.filter(p=>activeSet.has(p.date));
+  const activePendingPlans=pendingPlans.filter(p=>activeSet.has(p.date));
   const displayedPlans=period==="week"?todaysPlans.filter(p=>p.date===date):todaysPlans;
+  const displayedActivities=actualActivities.filter(a=>a.date===date);
   const todaysMeals=(data?.meals||[]).filter(m=>activeSet.has(m.date));
-  const allDates=Array.from(new Set([...(data?.days||[]).map(d=>d.date),...(data?.meals||[]).map(m=>m.date),...(data?.plans||[]).map(p=>p.date)])).sort().reverse();
+  const allDates=Array.from(new Set([...(data?.days||[]).map(d=>d.date),...(data?.meals||[]).map(m=>m.date),...verifiedPlans.map(p=>p.date),...actualActivities.map(a=>a.date)])).sort().reverse();
   const days=data?.days||[];
   const visibleDemoExercises=EXERCISE_DEMO_LIBRARY.filter(e=>{
     const q=query.trim().toLowerCase();
@@ -179,19 +186,26 @@ export default function LivePortal({tab}:{tab:Tab}){
         <Kpi label="Estrés medio" number={metric(chosen,"estrés")}/>
       </div>
       <div className="home-grid">
-        <div className="panel"><h2><Dumbbell size={19}/> Rutinas programadas</h2>{todaysPlans.length?todaysPlans.map(p=><p key={p.id}>{longDate(p.date)} · {p.title} · {p.steps.length} ejercicios · {alreadyInGarmin(p)?"Existe en Garmin":"Solo en Fitness"}</p>):<p className="muted">No hay rutina guardada en Fitness para este día. Se podrá registrar desde ChatGPT.</p>}</div>
+        <div className="panel"><h2><Dumbbell size={19}/> Ejercicio real y pendiente</h2>
+          {actualActivities.filter(a=>activeSet.has(a.date)).map(a=><p key={a.id}>{longDate(a.date)} · {a.name} · Realizado en Garmin {a.duration_seconds!==null?"("+Math.round(a.duration_seconds/60)+" min)":""}</p>)}
+          {activePendingPlans.map(p=><p key={p.id}>{longDate(p.date)} · {p.title} · Programado, aún no realizado</p>)}
+          {!actualActivities.some(a=>activeSet.has(a.date))&&!activePendingPlans.length&&<p className="muted">No hay entrenamientos realizados ni planes pendientes registrados en el período.</p>}
+        </div>
         <div className="panel"><h2><Utensils size={19}/> Alimentación</h2><p>{todaysMeals.length} comidas registradas en {period==="week"?"la semana":"el día"}.</p><p className="muted">Los totales solo cuentan alimentos con estimación registrada; un día incompleto no es un consumo de 0 kcal.</p></div>
       </div>
     </>}
     {tab==="workout"&&<>
       <p className="muted">{periodCaption}{period==="week"?" · Selecciona un día del calendario para consultar sus ejercicios.":""}</p>
-      {period==="week"&&<WorkoutWeekGrid plans={todaysPlans} dates={activeDates} selectedDate={date} onSelectDay={setDate}/>}
-      <div className="meal-day-heading workout-detail-heading"><h2><Dumbbell size={20}/>{period==="week"?"Detalle del "+longDate(date):"Detalle del día"}</h2><span>{displayedPlans.length} rutinas</span></div>
-      {!displayedPlans.length&&<div className="panel"><p>No hay rutinas guardadas en Fitness para el día seleccionado. Una casilla vacía no confirma descanso.</p></div>}
+      {period==="week"&&<WorkoutWeekGrid plans={activePendingPlans} activities={actualActivities.filter(a=>activeSet.has(a.date))} dates={activeDates} selectedDate={date} onSelectDay={setDate}/>}
+      <div className="meal-day-heading workout-detail-heading"><h2><Dumbbell size={20}/>{period==="week"?"Detalle del "+longDate(date):"Detalle del día"}</h2><span>{displayedActivities.length} realizadas · {displayedPlans.filter(p=>!planConfirmedByGarmin(p,actualActivities)).length} pendientes</span></div>
+      {displayedActivities.length>0&&<div className="panel"><h2><CheckCircle2 size={19}/> Actividades realizadas (Garmin)</h2>
+        {displayedActivities.map(a=><p key={a.id}><strong>{a.name}</strong> · {a.duration_seconds!==null?Math.round(a.duration_seconds/60)+" min":"Duración sin dato"}{a.calories!==null?" · "+Math.round(a.calories)+" kcal estimadas":""}{a.avg_hr_bpm!==null?" · FC media "+Math.round(a.avg_hr_bpm)+" lpm":""} · ID {a.id}</p>)}
+      </div>}
+      {!displayedPlans.length&&!displayedActivities.length&&<div className="panel"><p>{hasSyncedActivityData(chosen)?"No se registraron entrenamientos en Garmin para este día.":"No hay datos de actividad Garmin sincronizados para este día; actualiza Garmin antes de concluir que fue descanso."}</p></div>}
       {sendMessage&&<div className="panel" role="status"><p>{sendMessage}</p></div>}
       {displayedPlans.map(p=><div className="panel" key={p.id}>
         <div className="panel-heading"><h2><Dumbbell size={19}/> {p.title}</h2></div>
-        <p className="muted">{longDate(p.date)} · {p.steps.length} pasos · {alreadyInGarmin(p)?"Rutina existente en Garmin":"Guardada solamente en Fitness"}</p>
+        <p className="muted">{longDate(p.date)} · {p.steps.length} pasos · {planConfirmedByGarmin(p,actualActivities)?"Realizada (coincide con actividad Garmin)":alreadyInGarmin(p)?"Programada en Garmin, aún no realizada":"Plan guardado en Fitness, aún no realizado"}</p>
         <button className="neon-button" disabled={sendingPlan!==null||!canSend(p)} onClick={()=>void sendToGarmin(p)}>
           <RefreshCcw size={17} className={sendingPlan===p.id?"spin":""}/>
           {sendingPlan===p.id?"Enviando…":alreadyInGarmin(p)?"Ya existe en Garmin":"Enviar a Garmin"}
@@ -221,13 +235,13 @@ export default function LivePortal({tab}:{tab:Tab}){
       <p className="muted">{periodCaption} · Selecciona Día o Semana arriba para cambiar el período.</p>
       {period==="week"&&<div className="panel history-card"><h2><CalendarDays size={20}/> Resumen de la semana</h2>
         <div className="weekly-overview">{activeDates.map(d=>{const day=byDay.get(d);const mealCount=(data?.meals||[]).filter(m=>m.date===d).length;
-          const planCount=(data?.plans||[]).filter(p=>p.date===d).length;
+          const completedCount=actualActivities.filter(a=>a.date===d).length;
           return <button className={"week-day "+(date===d?"chosen":"")} key={d} type="button" onClick={()=>{setDate(d);setPeriod("day");}}>
             <strong>{new Date(d+"T12:00:00Z").toLocaleDateString("es-CL",{weekday:"short",day:"numeric"})}</strong>
             <span>{fmt(metric(day,"pasos"))} pasos</span><span>{fmt(metric(day,"sueño"),1)} h sueño</span>
-            <small>{mealCount} comidas · {planCount} rutinas</small>
+            <small>{mealCount} comidas · {completedCount} actividades realizadas</small>
           </button>;})}</div>
-        <p className="muted">Selecciona un día para ver su detalle. Las cifras proceden de la última sincronización de cada fecha.</p>
+        <p className="muted">Solo se cuentan actividades realizadas de Garmin. Los planes no ejecutados nunca equivalen a entrenamientos realizados.</p>
       </div>}
       <div className="subtabs history-tabs">{["Resumen","Salud","Ejercicio","Alimentación","Recuperación"].map(k=><button key={k} className={detail===k?"selected":""} onClick={()=>setDetail(k)}>{k}</button>)}</div>
       {(detail==="Resumen"||detail==="Salud")&&<div className="metric-grid"><Kpi label="Pasos" number={metric(chosen,"pasos")}/><Kpi label="Sueño" number={metric(chosen,"sueño")} unit="h"/><Kpi label="Estrés" number={metric(chosen,"estrés")}/><Kpi label="Body Battery" number={metric(chosen,"battery")}/></div>}
