@@ -147,6 +147,31 @@ export default function LivePortal({tab}:{tab:Tab}){
     }catch(e){setError(e instanceof Error?e.message:"Error de Garmin");}
     finally{setSyncing(false);}
   }
+  async function syncSevenDays(){
+    setSyncing(true);setError("");
+    const end=date>chileDay()?chileDay():date;
+    const failures:string[]=[];
+    try{
+      // Fetch the last seven eligible dates, not future scheduled workouts.
+      // Sequence requests to avoid overwhelming Garmin's private MCP.
+      for(let day=6;day>=0;day--){
+        const d=new Date(end+"T12:00:00Z");
+        d.setUTCDate(d.getUTCDate()-day);
+        const dateString=d.toISOString().slice(0,10);
+        try{
+          const response=await fetch("/api/fitness/sync",{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({date:dateString})
+          });
+          const result=await response.json();
+          if(!response.ok||!result.ok)throw Error(result.error||"Error");
+        }catch{failures.push(dateString);}
+      }
+      await load();
+      if(failures.length)setError("No se actualizaron los días: "+failures.join(", ")+". Revisa Garmin.");
+    }catch(e){setError(e instanceof Error?e.message:"No se pudo sincronizar la semana");}
+    finally{setSyncing(false);}
+  }
   async function sendToGarmin(plan:Plan){
     setSendingPlan(plan.id);setSendMessage("");
     try{
@@ -171,7 +196,8 @@ export default function LivePortal({tab}:{tab:Tab}){
     {tab!=="catalog"&&<>
       <div className="live-toolbar panel">
         <div className="toolbar-top"><label>Fecha de referencia <input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
-          <button className="neon-button" disabled={syncing} onClick={sync}><RefreshCcw size={17} className={syncing?"spin":""}/>{syncing?"Sincronizando…":"Actualizar Garmin (día)"}</button></div>
+          <button className="neon-button" disabled={syncing} onClick={sync}><RefreshCcw size={17} className={syncing?"spin":""}/>{syncing?"Sincronizando…":"Actualizar Garmin (día)"}</button>
+          <button className="neon-button" disabled={syncing} onClick={()=>void syncSevenDays()}><RefreshCcw size={17} className={syncing?"spin":""}/> Sincronizar 7 días</button></div>
         <span className="muted">Última lectura del día seleccionado: {chosen?new Date(chosen.synced_at).toLocaleString("es-CL"):"Sin sincronizar"}.</span>
       </div>
       {tab!=="progress"&&<DatePickerBar date={date} period={period} onDate={setDate} onPeriod={setPeriod} availableDates={allDates}/>}
