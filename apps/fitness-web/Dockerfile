@@ -4,7 +4,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json ./
 RUN npm install --no-audit --no-fund
 COPY . .
-RUN npm run typecheck && npm run build
+RUN npm run sync:flow && npm run test:flow && npm run typecheck && npm run build
 
 FROM node:24-alpine AS runner
 WORKDIR /app
