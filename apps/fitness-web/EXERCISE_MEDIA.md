@@ -45,3 +45,29 @@ automatically associated with a visually similar but potentially incorrect varia
 
 The animations are decorative/educational references, not a substitution for individual
 technique evaluation, instruction by a professional, or medical advice.
+
+
+## Complete Flow library for the Exercises Dataset catalog (2026-11-01)
+
+In addition to the 12 manually verified Garmin demonstrations, the independent
+Exercises Dataset catalog uses a pinned Flow snapshot at commit
+`961bb2739015da373daa43b960c28ee839fe93e6`.
+
+`npm run sync:flow` downloads that snapshot **during the Docker build** and
+copies SVG frames into `public/flow-demos/<id>/frame-0{0,1,2}.svg`. It writes
+`public/data/flow-animation-index.json` with only **ID and exercise-name
+verified** matches against the bundled MIT exercise catalog. It does not
+copy frames or GIFs from Gym visual. No external media servers are called by
+browsers: the assets are self-hosted and remain behind Fitness's Cloudflare
+Access protection.
+
+The expected source coverage is 1,257 animated exercises and 67 instructions-only
+exercises (plus any ID/name mismatches skipped for safety). These are short
+loops of three stylized **SVG frames**, not bitmap GIF files, and are not
+technically or medically validated exercise demonstrations.
+
+The source declares CC0 to the extent of the rights it holds. Its NOTICE.md
+records insufficient prompt provenance for 1,244 out of 1,257 sequences.
+Private deployment does **not** change the copyright status of third-party
+content. Keep the upstream notices available and reassess if future evidence
+indicates any artwork is not authorized for use.

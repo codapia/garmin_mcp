@@ -203,3 +203,10 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 .exercises-license{line-height:1.65}
 .exercises-license a{color:var(--lime)}
 @media(max-width:760px){.muscle-figures svg{height:210px}.muscle-labels{grid-template-columns:1fr 1fr}.catalog-source-tabs button{flex:1}}
+
+/* Animated Flow catalog cards: movement above muscle activation. */
+.ext-flow-preview{min-width:0}
+.ext-flow-preview .exercise-demo{margin:8px 0 12px}
+.ext-no-flow{font-size:12px;color:#a9b9a5;background:#1b271e;border:1px dashed #485746;border-radius:11px;padding:12px;margin:8px 0}
+.flow-only-toggle{display:inline-flex;align-items:center;gap:9px;color:#d3e8cb;font-size:12px;font-weight:700;margin:12px 0 6px;cursor:pointer}
+.flow-only-toggle input{accent-color:#b8ff17;width:16px;height:16px}

@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test:db": "node lib/server/db.integration.mjs",
     "test:origin": "node --experimental-strip-types --test lib/server/origin.test.mjs",
-    "test:exercises": "node lib/exercises-dataset.integration.mjs"
+    "test:exercises": "node lib/exercises-dataset.integration.mjs",
+    "sync:flow": "node scripts/sync-flow.mjs",
+    "test:flow": "node lib/flow-dataset.integration.mjs"
   },
   "dependencies": {
     "next": "16.4.1",
