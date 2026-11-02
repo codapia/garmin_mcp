@@ -210,3 +210,7 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 .ext-no-flow{font-size:12px;color:#a9b9a5;background:#1b271e;border:1px dashed #485746;border-radius:11px;padding:12px;margin:8px 0}
 .flow-only-toggle{display:inline-flex;align-items:center;gap:9px;color:#d3e8cb;font-size:12px;font-weight:700;margin:12px 0 6px;cursor:pointer}
 .flow-only-toggle input{accent-color:#b8ff17;width:16px;height:16px}
+
+/* Confirmed Garmin activities and pending plans must never look identical. */
+.workout-week-entry.planned{border-style:dashed;border-color:#64715d;background:#253124;color:#d4e2ca}
+.workout-week-entry.planned span{color:#d8c39a}

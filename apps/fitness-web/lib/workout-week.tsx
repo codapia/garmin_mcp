@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarDays, Dumbbell, Pencil, Save, X } from "lucide-react";
 import { longDate, shortDate } from "./fitness-insights";
+import type { GarminActivity } from "./workout-reconciliation";
 
 export type WorkoutPlan={
   id:string;date:string;title:string;steps:Record<string,unknown>[];
@@ -35,8 +36,8 @@ export function loadDisplay(step:Record<string,unknown>):{label:string;status:st
   return {label:isCycling?"Resistencia sin dato":isBodyweight?"Peso corporal / sin kg":"— kg",status:"No informado por Garmin",detail:"Puedes registrar una carga planificada en Fitness"};
 }
 
-export function WorkoutWeekGrid({plans,dates,selectedDate,onSelectDay}:{
-  plans:WorkoutPlan[];dates:string[];selectedDate:string;onSelectDay:(date:string)=>void;
+export function WorkoutWeekGrid({plans,activities,dates,selectedDate,onSelectDay}:{
+  plans:WorkoutPlan[];activities:GarminActivity[];dates:string[];selectedDate:string;onSelectDay:(date:string)=>void;
 }){
   const rows=[
     {id:"strength",title:"Fuerza",subtitle:"Mancuernas, banco, bandas"},
@@ -49,9 +50,15 @@ export function WorkoutWeekGrid({plans,dates,selectedDate,onSelectDay}:{
     if(sport.includes("strength")||plan.steps.some(s=>Boolean(s.category||s.source_garmin_category)))return "strength";
     return "other";
   }
+  function activityKind(activity:GarminActivity){
+    const sport=activity.type.toLowerCase();
+    if(/cycl|running|cardio|swimming|walk|rowing/.test(sport))return "cardio";
+    if(/strength|weight|resistance/.test(sport))return "strength";
+    return "other";
+  }
   return <section className="panel workout-week-section">
     <div className="meal-day-heading"><h2><CalendarDays size={20}/> Semana de entrenamiento</h2>
-      <span>Selecciona un día para consultar sus ejercicios y cargas</span></div>
+      <span>Realizado según Garmin; los planes pendientes aparecen aparte</span></div>
     <div className="meal-week-scroll" tabIndex={0} role="region" aria-label="Entrenamientos de lunes a domingo, desplazamiento horizontal">
       <div className="meal-week-grid workout-week-grid" role="table" aria-label="Plan semanal por día y tipo">
         <div className="week-corner" role="columnheader">Tipo</div>
@@ -65,19 +72,26 @@ export function WorkoutWeekGrid({plans,dates,selectedDate,onSelectDay}:{
         </button>)}
         {rows.map(row=><div key={row.id} role="row" className="meal-week-row">
           <div className="week-row-label" role="rowheader"><strong>{row.title}</strong><small>{row.subtitle}</small></div>
-          {dates.map(d=>{const matches=plans.filter(p=>p.date===d&&kind(p)===row.id);
+          {dates.map(d=>{
+            const completed=activities.filter(a=>a.date===d&&activityKind(a)===row.id);
+            const scheduled=plans.filter(p=>p.date===d&&kind(p)===row.id);
             return <div role="cell" key={row.id+d} className={"meal-week-cell "+(d===selectedDate?"current":"")}>
-              {matches.length?matches.map(plan=><button type="button" key={plan.id} className="workout-week-entry"
-                onClick={()=>onSelectDay(d)} aria-label={"Ver "+plan.title+" del "+longDate(d)}>
+              {completed.map(activity=><button type="button" key={activity.id} className="workout-week-entry"
+                onClick={()=>onSelectDay(d)} aria-label={"Actividad Garmin realizada: "+activity.name}>
+                <strong>{activity.name}</strong><span>Realizado · Garmin {activity.duration_seconds!==null?"· "+Math.round(activity.duration_seconds/60)+" min":""}</span>
+              </button>)}
+              {scheduled.map(plan=><button type="button" key={plan.id} className="workout-week-entry planned"
+                onClick={()=>onSelectDay(d)} aria-label={"Plan pendiente: "+plan.title}>
                 <strong>{plan.title.replace(/^Importada de Garmin\s*·\s*/,"")}</strong>
-                <span>{plan.steps.length} ejercicios</span>
-              </button>):<span className="week-cell-empty">—</span>}
+                <span>Programado · no realizado</span>
+              </button>)}
+              {!completed.length&&!scheduled.length&&<span className="week-cell-empty">—</span>}
             </div>;
           })}
         </div>)}
       </div>
     </div>
-    <p className="muted meal-day-note">Solo muestra rutinas guardadas o importadas en Fitness; una casilla vacía no significa descanso confirmado. La carga de una rutina importada no equivale a peso realizado.</p>
+    <p className="muted meal-day-note">«Realizado» solo corresponde a actividades con ID de Garmin. Los planes no realizados de días anteriores no se muestran como sesiones. Una casilla vacía sin Garmin sincronizado no demuestra descanso.</p>
   </section>;
 }
 
