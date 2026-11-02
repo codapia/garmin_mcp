@@ -48,6 +48,13 @@ export function hasExerciseDemo(category:unknown,exerciseName:unknown):boolean{
 
 const FRAME_SEQUENCE=[0,1,2,1] as const;
 const BASE="/exercise-demos/";
+// Full Flow library is fetched at build time, served exclusively from Fitness.
+// IDs are accepted only from the generated verified ID/name manifest.
+export function FlowExerciseAnimation({id,label}:{id:string;label:string}){
+  const safeId=/^[0-9]{4}$/.test(id)?id:undefined;
+  return <ExerciseDemoPlayer key={safeId||"missing"} demo={safeId?{id:safeId,variant:label}:undefined}
+    label={label} base="/flow-demos/"/>;
+}
 
 export function ExerciseDemo({category,exerciseName,label}:{category?:unknown;exerciseName?:unknown;label:string}){
   const key=typeof category==="string"&&typeof exerciseName==="string"
@@ -55,7 +62,7 @@ export function ExerciseDemo({category,exerciseName,label}:{category?:unknown;ex
   const demo=DEMOS[key];
   return <ExerciseDemoPlayer key={key} demo={demo} label={label}/>;
 }
-function ExerciseDemoPlayer({demo,label}:{demo:Demo|undefined;label:string}){
+function ExerciseDemoPlayer({demo,label,base=BASE}:{demo:Demo|undefined;label:string;base?:string}){
   const root=useRef<HTMLDivElement>(null);
   const [visible,setVisible]=useState(false);
   const [paused,setPaused]=useState(false);
@@ -81,8 +88,8 @@ function ExerciseDemoPlayer({demo,label}:{demo:Demo|undefined;label:string}){
   useEffect(()=>{
     if(!demo||!visible||errored)return;
     // Preload all frames so playback doesn't flash a blank frame.
-    for(let i=0;i<3;i++){const image=new window.Image();image.src=BASE+demo.id+"/frame-0"+i+".svg";}
-  },[demo,visible,errored]);
+    for(let i=0;i<3;i++){const image=new window.Image();image.src=base+demo.id+"/frame-0"+i+".svg";}
+  },[demo,visible,errored,base]);
   useEffect(()=>{
     if(!demo||!visible||paused||reduced||errored)return;
     const timer=window.setInterval(()=>setIndex(i=>(i+1)%FRAME_SEQUENCE.length),320);
@@ -94,7 +101,7 @@ function ExerciseDemoPlayer({demo,label}:{demo:Demo|undefined;label:string}){
   const frame=FRAME_SEQUENCE[reduced?0:index];
   return <div ref={root} className="exercise-demo" aria-label={"Ilustración de "+label}>
     {!errored?<img
-      src={BASE+demo.id+"/frame-0"+frame+".svg"}
+      src={base+demo.id+"/frame-0"+frame+".svg"}
       alt={"Ilustración de "+demo.variant}
       loading="lazy" decoding="async"
       onError={()=>setErrored(true)}
