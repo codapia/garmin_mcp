@@ -64,7 +64,7 @@ that explicitly covers hosting and displaying the media in this app.
 
 ## Visualization
 
-The 12 exercise IDs that match the previously installed Flow Exercise Dataset artwork also display their **existing** Flow SVG sequences, clearly credited separately. No Gym visual media is imported.
+The original 12 exact Garmin-to-Flow mappings remain available for the Garmin UI. For the separate Exercises Dataset catalog, build-time integration imports the complete pinned Flow animation library (up to 1,257 unique exercise sequences). It displays SVG motion only for records whose exercise ID **and normalized name** match the original MIT metadata. Mismatches are excluded, and 67 records may have instructions only. Flow artwork is declared CC0 only to the extent of the rights held by Flow; see its NOTICE.md for provenance gaps. No Gym visual media is imported.
 
 The `lib/exercises-dataset-catalog.tsx` muscle-map illustration is a new
 approximate SVG region diagram authored for Fitness. Lime indicates primary
@@ -81,7 +81,7 @@ scheduling an exercise to Garmin; explicit verified mapping is required.
 
 - `npm run test:exercises` validates all 1,324 records and excludes media.
 - `npm run typecheck` and `npm run build` validate the UI.
-- No migrations, Garmin writes, external media calls or API credentials are required.
-- When a valid media license is granted, a separate implementation will add an
-  allowlisted, attributable asset manifest and licensed 180x180 GIFs; **do not**
-  automatically download all upstream GIFs without this permission.
+- No migrations, Garmin writes or API credentials are required. The build step fetches the pinned Flow archive once; runtime playback uses local SVG files and makes no external media requests.
+- Do not import the upstream Gym visual GIFs without a separately valid license.
+- `npm run sync:flow` downloads a pinned, self-hosted Flow release and writes a verified animation-ID manifest.
+- `npm run test:flow` checks the matched media and frame availability.
