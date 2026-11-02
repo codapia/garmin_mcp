@@ -2,7 +2,7 @@
 
 import {useEffect,useMemo,useState} from "react";
 import {Dumbbell,Search,ShieldAlert,ChevronDown} from "lucide-react";
-import {ExerciseDemo} from "./exercise-demo";
+import {ExerciseDemo,FlowExerciseAnimation} from "./exercise-demo";
 
 /**
  * Source: hasaneyldrm/exercises-dataset (exercise metadata and Spanish instruction text, MIT).
@@ -90,16 +90,17 @@ function MuscleMap({entry}:{entry:Exercise}){
     <p>Esquema orientativo de regiones corporales según los metadatos del ejercicio; no representa intensidad ni medición real de activación muscular.</p>
   </div>;
 }
-function ExerciseCard({entry}:{entry:Exercise}){
+function ExerciseCard({entry,hasFlow}:{entry:Exercise;hasFlow:boolean}){
   const [open,setOpen]=useState(false);
   return <article className="panel ext-exercise-card">
     <div className="ext-card-top"><span className="chip lime">{es(entry.c)}</span><span className="ext-id">#{entry.id}</span></div>
     <h3>{entry.n}</h3>
     <p className="muted">{es(entry.e)} · {es(entry.b)}</p>
-    {EXISTING_FLOW_DEMOS[entry.id]&&<div className="ext-flow-preview">
+    {hasFlow?<div className="ext-flow-preview">
+      <FlowExerciseAnimation id={entry.id} label={entry.n}/>
+    </div>:EXISTING_FLOW_DEMOS[entry.id]?<div className="ext-flow-preview">
       <ExerciseDemo category={EXISTING_FLOW_DEMOS[entry.id][0]} exerciseName={EXISTING_FLOW_DEMOS[entry.id][1]} label={entry.n}/>
-      <span>Demostración Flow (SVG orientativo), distinta de los GIFs de Gym visual.</span>
-    </div>}
+    </div>:<p className="ext-no-flow">Este ejercicio no tiene animación Flow disponible.</p>}
     <MuscleMap entry={entry}/>
     <div className="muscle-labels"><div><strong>Principal</strong><span>{es(entry.t)}</span></div>
       <div><strong>Secundarios</strong><span>{[...new Set([entry.m,...entry.s])].filter(x=>x&&x!==entry.t).map(es).join(", ")||"No especificados"}</span></div>
@@ -108,7 +109,7 @@ function ExerciseCard({entry}:{entry:Exercise}){
       Cómo se hace (español) <ChevronDown size={16} className={open?"open":""}/>
     </button>
     {open&&<p className="exercise-instructions">{entry.es||"Sin instrucciones traducidas."}</p>}
-    <p className="ext-media-note">GIF anatómico © Gym visual: requiere autorización adicional. Los datos e instrucciones son MIT; si aparece una animación, corresponde a la biblioteca Flow ya integrada.</p>
+    <p className="ext-media-note">Ilustración orientativa Flow en secuencia SVG, no GIF de Gym visual. El movimiento y la activación muscular no están validados clínicamente.</p>
   </article>;
 }
 export default function ExercisesDatasetCatalog(){
@@ -120,6 +121,24 @@ export default function ExercisesDatasetCatalog(){
   const [equipment,setEquipment]=useState("");
   const [target,setTarget]=useState("");
   const [limit,setLimit]=useState(24);
+  const [flowIds,setFlowIds]=useState<Set<string>>(()=>new Set());
+  const [flowLoaded,setFlowLoaded]=useState(false);
+  const [onlyAnimated,setOnlyAnimated]=useState(false);
+  useEffect(()=>{
+    let active=true;
+    fetch("/data/flow-animation-index.json",{cache:"force-cache"}).then(response=>{
+      if(!response.ok)throw new Error("Manifest de animaciones no disponible");
+      return response.json();
+    }).then((manifest:unknown)=>{
+      if(!active)return;
+      const ids=(manifest as {animatedIds?:unknown})?.animatedIds;
+      if(!Array.isArray(ids)||!ids.every(id=>typeof id==="string"&&/^[0-9]{4}$/.test(id)))
+        throw new Error("Manifest de Flow inválido");
+      setFlowIds(new Set(ids));
+    }).catch(()=>{/* Original 12 verified Flow demonstrations still work as a fallback. */})
+      .finally(()=>{if(active)setFlowLoaded(true);});
+    return ()=>{active=false;};
+  },[]);
   useEffect(()=>{
     let active=true;
     fetch("/data/exercises-dataset-mit.json",{cache:"force-cache"}).then(r=>{
@@ -139,12 +158,13 @@ export default function ExercisesDatasetCatalog(){
   const results=useMemo(()=>entries.filter(e=>{
     const q=query.trim().toLocaleLowerCase("es");
     return (!q||[e.n,e.c,e.e,e.t,e.m,...e.s,e.es].some(v=>v.toLocaleLowerCase("es").includes(q)))&&
-      (!category||e.c===category)&&(!equipment||e.e===equipment)&&(!target||e.t===target);
-  }),[entries,query,category,equipment,target]);
+      (!category||e.c===category)&&(!equipment||e.e===equipment)&&(!target||e.t===target)&&
+      (!onlyAnimated||flowIds.has(e.id)||Boolean(EXISTING_FLOW_DEMOS[e.id]));
+  }),[entries,query,category,equipment,target,onlyAnimated,flowIds]);
   return <div className="exercises-dataset">
     <div className="panel exercises-source-note"><Dumbbell size={20}/><div>
       <strong>Exercises Dataset · {entries.length||"1.324"} ejercicios</strong>
-      <p>Metadatos e instrucciones en español (licencia MIT), con un esquema muscular propio. <strong>Los GIFs anatómicos de Gym visual no se reproducen sin licencia.</strong> No se asignan automáticamente a códigos Garmin.</p>
+      <p>Instrucciones en español, animaciones de movimiento Flow (SVG secuencial) y músculos principales y secundarios resaltados. {flowLoaded?flowIds.size+" animaciones Flow verificadas disponibles.":"Cargando animaciones Flow…"} El mapa muscular es orientativo; no se asignan ejercicios automáticamente a Garmin.</p>
     </div></div>
     <div className="panel catalog-controls">
       <div className="search-input"><Search size={19}/><input value={query} onChange={e=>{setQuery(e.target.value);setLimit(24)}} placeholder="Buscar ejercicio, músculo o indicación…"/></div>
@@ -153,11 +173,12 @@ export default function ExercisesDatasetCatalog(){
         <label>Músculo principal<select value={target} onChange={e=>{setTarget(e.target.value);setLimit(24)}}><option value="">Todos</option>{targets.map(x=><option key={x} value={x}>{es(x)}</option>)}</select></label>
         <label>Equipamiento<select value={equipment} onChange={e=>{setEquipment(e.target.value);setLimit(24)}}><option value="">Todos</option>{equips.map(x=><option key={x} value={x}>{es(x)}</option>)}</select></label>
       </div>
+      <label className="flow-only-toggle"><input type="checkbox" checked={onlyAnimated} onChange={e=>{setOnlyAnimated(e.target.checked);setLimit(24);}}/> Solo ejercicios con animación Flow</label>
       <p className="muted">{loading?"Cargando ejercicios…":error||results.length+" coincidencias · mostrando "+Math.min(limit,results.length)+"."}</p>
     </div>
-    {!loading&&!error&&<div className="catalog-grid">{results.slice(0,limit).map(x=><ExerciseCard key={x.id} entry={x}/>)}</div>}
+    {!loading&&!error&&<div className="catalog-grid">{results.slice(0,limit).map(x=><ExerciseCard key={x.id} entry={x} hasFlow={flowIds.has(x.id)}/>)}</div>}
     {error&&<div className="panel"><ShieldAlert size={20}/> {error}</div>}
     {limit<results.length&&<div className="exercises-more"><button type="button" onClick={()=>setLimit(v=>v+24)}>Ver 24 más</button></div>}
-    <p className="muted exercises-license">Fuente: <a href="https://github.com/hasaneyldrm/exercises-dataset" target="_blank" rel="noopener noreferrer">Exercises Dataset</a> · © Hasan Emir Yıldırım, datos e instrucciones MIT. Los GIFs y miniaturas son © Gym visual y requieren su propia licencia.</p>
+    <p className="muted exercises-license">Fuentes: <a href="https://github.com/hasaneyldrm/exercises-dataset" target="_blank" rel="noopener noreferrer">Exercises Dataset</a> (datos e instrucciones MIT) y <a href="https://github.com/ozansozuozgit/flow-exercise-dataset" target="_blank" rel="noopener noreferrer">Flow Exercise Dataset</a> (ilustraciones SVG declaradas CC0, con limitaciones de procedencia). No se utilizan GIFs ni miniaturas de Gym visual.</p>
   </div>;
 }
