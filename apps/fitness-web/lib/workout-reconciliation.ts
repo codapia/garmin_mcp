@@ -59,9 +59,15 @@ export function planConfirmedByGarmin(plan:FitnessPlanForReconciliation,activiti
       positiveId(step.garmin_workout_id)
     ])
   ].filter(Boolean));
+  // Explicit links are written only after cross-checking actual Garmin IDs
+  // against the day. A scheduled workout ID alone is not proof of execution.
+  const confirmedActivityIds=new Set(plan.steps
+    .filter(step=>step.fitness_execution_source==="garmin")
+    .map(step=>positiveId(step.source_garmin_activity_id)).filter(Boolean));
   const planName=normalized(plan.title);
   return activities.some(activity=>{
     if(activity.date!==plan.date)return false;
+    if(confirmedActivityIds.has(activity.id))return true;
     if(activity.workout_id&&refs.has(activity.workout_id))return true;
     const activityName=normalized(activity.name);
     // Garmin truncates names on some devices; require a substantial exact
