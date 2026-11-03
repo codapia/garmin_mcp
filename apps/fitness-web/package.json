@@ -12,7 +12,7 @@
     "test:exercises": "node lib/exercises-dataset.integration.mjs",
     "sync:flow": "node scripts/sync-flow.mjs",
     "test:flow": "node lib/flow-dataset.integration.mjs",
-    "test:workouts": "node --experimental-strip-types --test lib/workout-reconciliation.test.mjs"
+    "test:workouts": "node --experimental-strip-types --test lib/workout-reconciliation.test.mjs lib/workout-duration.test.mjs"
   },
   "dependencies": {
     "next": "16.4.1",
