@@ -45,3 +45,29 @@ test("historical matching accepts device-truncated names and Garmin workout ID",
   const usingId={...activity,name:"Bici indoor",workout_id:"1749550383"};
   assert.equal(planConfirmedByGarmin(plans[1],[usingId]),true);
 });
+
+test("explicitly linked Garmin activity makes a differently named Fitness plan completed",()=>{
+  const date="2026-11-03";
+  const activities=activitiesFromGarmin([{date,activities:{activities:[
+    {id:24949257071,name:"Mar 03-11 | Full body fuerza 30",type:"strength_training",duration_seconds:1768.4}
+  ]}}]);
+  const linked={
+    id:"fullbody",date,title:"Mar 03-11 | Full body moderado | Casa | 50 min",
+    steps:[{name:"Sentadilla",source_garmin_activity_id:"24949257071",fitness_execution_source:"garmin"}],
+    garmin_workout_id:null
+  };
+  assert.equal(planConfirmedByGarmin(linked,activities),true);
+  assert.deepEqual(pendingWorkoutPlans([linked],activities,date),[]);
+});
+test("an activity from a different date or a nonexistent ID cannot complete the plan",()=>{
+  const date="2026-11-03";
+  const activities=activitiesFromGarmin([{date,activities:{activities:[
+    {id:24949257071,name:"Mar 03-11 | Full body fuerza 30",type:"strength_training"}
+  ]}}]);
+  const bad={id:"bad",date,title:"Mar 03-11 | Full body moderado | Casa | 50 min",
+    steps:[{name:"Sentadilla",source_garmin_activity_id:"123456",fitness_execution_source:"garmin"}],
+    garmin_workout_id:null};
+  assert.equal(planConfirmedByGarmin(bad,activities),false);
+  assert.equal(planConfirmedByGarmin({...bad,date:"2026-11-02",steps:[{name:"Sentadilla",source_garmin_activity_id:"24949257071",fitness_execution_source:"garmin"}]},activities),false);
+  assert.equal(planConfirmedByGarmin({...bad,steps:[{name:"Sentadilla",source_garmin_activity_id:"24949257071"}]},activities),false);
+});
