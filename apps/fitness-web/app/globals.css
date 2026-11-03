@@ -222,3 +222,10 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 .workout-time-panel strong{margin-left:auto;font-size:23px;line-height:1.2;font-weight:850;font-variant-numeric:tabular-nums;color:var(--lime);white-space:nowrap}
 .workout-effort-note{margin:0;font-size:13px;color:#b7c6af}
 @media(max-width:500px){.workout-time-panel{padding:14px;gap:9px}.workout-time-panel strong{font-size:21px}}
+
+/* Garmin execution record: recorded data is visibly separate from the original workout plan. */
+.exercise-execution{background:#1d2c1c;border:1px solid #516d42;border-radius:14px;padding:15px 18px;color:#d6e6cd}
+.exercise-execution h4{display:flex;align-items:center;gap:8px;color:var(--lime);font-size:14px;margin:0 0 10px}
+.exercise-execution p{margin:5px 0;font-size:13px;line-height:1.65}
+.exercise-execution strong{color:#f0f8ed}
+.exercise-execution small{display:block;color:#adbfa7;font-size:11px;line-height:1.5;margin-top:8px}

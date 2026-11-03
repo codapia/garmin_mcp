@@ -5,7 +5,7 @@ import { Activity, CalendarDays, CheckCircle2, Clock3, Dumbbell, HeartPulse, Moo
 import { DatePickerBar, MealGroups, MealWeekGrid, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
 import { ExerciseDemo, EXERCISE_DEMO_LIBRARY, hasExerciseDemo } from "./exercise-demo";
 import { ExerciseLoad, WorkoutWeekGrid, loadDisplay, type WorkoutPlan } from "./workout-week";
-import { formatStepDuration, stepDurationSeconds, timedStepBreakdown } from "./workout-duration";
+import { formatDurationSeconds, formatStepDuration, stepDurationSeconds, timedStepBreakdown } from "./workout-duration";
 import { activitiesFromGarmin, visibleWorkoutPlans, pendingWorkoutPlans, hasSyncedActivityData, planConfirmedByGarmin } from "./workout-reconciliation";
 import ExercisesDatasetCatalog from "./exercises-dataset-catalog";
 
@@ -69,6 +69,23 @@ function Line({numbers}:{numbers:(number|null)[]}){
 }
 function Kpi({label,number,unit=""}:{label:string;number:number|null;unit?:string}) {
   return <div className="metric panel"><div className="metric-head"><Activity size={17}/><span>{label}</span></div><strong>{fmt(number,1)}<small> {unit}</small></strong><span className="metric-foot">Garmin sincronizado</span></div>;
+}
+function ExecutionDetails({step,date,activities}:{step:Record<string,unknown>;date:string;activities:ReturnType<typeof activitiesFromGarmin>}){
+  const sourceId=String(step.source_garmin_activity_id??"");
+  const activity=activities.find(a=>a.id===sourceId&&a.date===date);
+  if(!activity||step.fitness_execution_source!=="garmin")return null;
+  const activeSets=Array.isArray(step.fitness_actual_sets)?step.fitness_actual_sets.filter(s=>s&&typeof s==="object"&&!Array.isArray(s)) as Record<string,unknown>[]:[];
+  const repetitions=activeSets.map(s=>getNum(s.reps)).filter((n):n is number=>n!==null);
+  const weights=activeSets.map(s=>getNum(s.weight_kg)).filter((n):n is number=>n!==null);
+  const actualSeconds=getNum(step.fitness_actual_duration_seconds);
+  const hasExternalWeight=weights.some(w=>w>0);
+  return <div className="exercise-execution">
+    <h4><CheckCircle2 size={17}/> Realizado · datos de Garmin</h4>
+    {actualSeconds!==null&&<p><strong>Duración real:</strong> {formatDurationSeconds(actualSeconds)}{activity.avg_hr_bpm!==null?" · FC media "+Math.round(activity.avg_hr_bpm)+" lpm":""}</p>}
+    {activeSets.length>0&&<p><strong>Series registradas:</strong> {activeSets.length} · <strong>Reps por serie:</strong> {repetitions.join(" / ")||"No disponibles"}</p>}
+    {weights.length>0&&<p><strong>Carga anotada en Garmin:</strong> {hasExternalWeight?weights.map(w=>fmt(w,1)).join(" / ")+" kg (alcance por mano o total sin confirmar)":"0 kg externos registrados; una banda puede aportar resistencia no cuantificada"}</p>}
+    <small>Actividad Garmin #{activity.id}. Las repeticiones y los pesos proceden del registro del reloj, no de una medición independiente.</small>
+  </div>;
 }
 export default function LivePortal({tab}:{tab:Tab}){
   const [data,setData]=useState<Timeline|null>(null);
@@ -234,12 +251,12 @@ export default function LivePortal({tab}:{tab:Tab}){
         <div className="panel-heading"><h2><Dumbbell size={19}/> {p.title}</h2></div>
         <p className="muted">{longDate(p.date)} · {p.steps.length} pasos · {planConfirmedByGarmin(p,actualActivities)?"Realizada (coincide con actividad Garmin)":alreadyInGarmin(p)?"Programada en Garmin, aún no realizada":"Plan guardado en Fitness, aún no realizado"}</p>
         {timedStepBreakdown(p.steps)&&<p className="muted">Tramos con duración definida: {timedStepBreakdown(p.steps)}. El resto del tiempo corresponde a fuerza y descansos aproximados.</p>}
-        <button className="neon-button" disabled={sendingPlan!==null||!canSend(p)} onClick={()=>void sendToGarmin(p)}>
+        <button className="neon-button" disabled={sendingPlan!==null||!canSend(p)||planConfirmedByGarmin(p,actualActivities)} onClick={()=>void sendToGarmin(p)}>
           <RefreshCcw size={17} className={sendingPlan===p.id?"spin":""}/>
-          {sendingPlan===p.id?"Enviando…":alreadyInGarmin(p)?"Ya existe en Garmin":"Enviar a Garmin"}
+          {sendingPlan===p.id?"Enviando…":planConfirmedByGarmin(p,actualActivities)?"Ya realizado en Garmin":alreadyInGarmin(p)?"Ya existe en Garmin":"Enviar a Garmin"}
         </button>
         {imported(p)&&<p className="muted">Esta rutina fue importada desde Garmin: se conserva únicamente para consulta y no se puede reenviar para evitar duplicados.</p>}
-        {!alreadyInGarmin(p)&&!canSend(p)&&<p className="muted">Esta rutina aún no contiene todos los códigos y repeticiones oficiales necesarios para enviarla.</p>}
+        {!alreadyInGarmin(p)&&!canSend(p)&&!planConfirmedByGarmin(p,actualActivities)&&<p className="muted">Esta rutina aún no contiene todos los códigos y repeticiones oficiales necesarios para enviarla.</p>}
       </div>)}
       <div className="exercise-grid">{displayedPlans.flatMap(p=>p.steps.map((s,i)=>({p,s,i}))).map(({p,s,i})=>
         <article className="exercise-card panel" key={p.id+"-"+i}><span className="eyebrow">{p.title} · EJERCICIO {i+1}</span><h3>{value(s.name)}</h3>
@@ -259,6 +276,7 @@ export default function LivePortal({tab}:{tab:Tab}){
             <div className="workout-numbers"><div><span>Series</span><strong>{value(s.sets??s.series)}</strong></div><div><span>Reps</span><strong>{value(s.reps)}</strong></div><div><span>Carga</span><strong>{loadDisplay(s).label}</strong></div><div><span>Descanso</span><strong>{value(s.rest_seconds??s.rest)}</strong></div></div>
             <ExerciseLoad key={p.id+"-"+i+"-"+p.version} plan={p} step={s} index={i} onSaved={load}/>
           </>}
+          <ExecutionDetails step={s} date={p.date} activities={actualActivities}/>
           <div className="guide-grid"><div><h4><CheckCircle2 size={17}/> Cómo hacerlo</h4><p>{value(s.instructions??s.technique)}</p></div><div><h4 className="warning"><AlertTriangle size={17}/> Errores frecuentes</h4><p>{value(s.mistakes)}</p></div></div>
           <div className="safety"><ShieldCheck size={17}/> {value(s.safety??"Precauciones técnicas aún no registradas para este movimiento.")}</div>
 
