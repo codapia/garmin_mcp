@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, CalendarDays, CheckCircle2, Dumbbell, HeartPulse, Moon, RefreshCcw, Search, Utensils, ShieldCheck, TrendingUp, AlertTriangle } from "lucide-react";
+import { Activity, CalendarDays, CheckCircle2, Clock3, Dumbbell, HeartPulse, Moon, RefreshCcw, Search, Utensils, ShieldCheck, TrendingUp, AlertTriangle } from "lucide-react";
 import { DatePickerBar, MealGroups, MealWeekGrid, TrendExplorer, periodDates, longDate, type Period } from "./fitness-insights";
 import { ExerciseDemo, EXERCISE_DEMO_LIBRARY, hasExerciseDemo } from "./exercise-demo";
 import { ExerciseLoad, WorkoutWeekGrid, loadDisplay, type WorkoutPlan } from "./workout-week";
+import { formatStepDuration, stepDurationSeconds, timedStepBreakdown } from "./workout-duration";
 import { activitiesFromGarmin, visibleWorkoutPlans, pendingWorkoutPlans, hasSyncedActivityData, planConfirmedByGarmin } from "./workout-reconciliation";
 import ExercisesDatasetCatalog from "./exercises-dataset-catalog";
 
@@ -232,6 +233,7 @@ export default function LivePortal({tab}:{tab:Tab}){
       {displayedPlans.map(p=><div className="panel" key={p.id}>
         <div className="panel-heading"><h2><Dumbbell size={19}/> {p.title}</h2></div>
         <p className="muted">{longDate(p.date)} · {p.steps.length} pasos · {planConfirmedByGarmin(p,actualActivities)?"Realizada (coincide con actividad Garmin)":alreadyInGarmin(p)?"Programada en Garmin, aún no realizada":"Plan guardado en Fitness, aún no realizado"}</p>
+        {timedStepBreakdown(p.steps)&&<p className="muted">Tramos con duración definida: {timedStepBreakdown(p.steps)}. El resto del tiempo corresponde a fuerza y descansos aproximados.</p>}
         <button className="neon-button" disabled={sendingPlan!==null||!canSend(p)} onClick={()=>void sendToGarmin(p)}>
           <RefreshCcw size={17} className={sendingPlan===p.id?"spin":""}/>
           {sendingPlan===p.id?"Enviando…":alreadyInGarmin(p)?"Ya existe en Garmin":"Enviar a Garmin"}
@@ -246,8 +248,17 @@ export default function LivePortal({tab}:{tab:Tab}){
             exerciseName={s.exercise_name??s.source_garmin_exercise_name}
             label={value(s.name)}
           />
-          <div className="workout-numbers"><div><span>Series</span><strong>{value(s.sets??s.series)}</strong></div><div><span>Reps</span><strong>{value(s.reps)}</strong></div><div><span>Carga</span><strong>{loadDisplay(s).label}</strong></div><div><span>Descanso</span><strong>{value(s.rest_seconds??s.rest)}</strong></div></div>
-          <ExerciseLoad key={p.id+"-"+i+"-"+p.version} plan={p} step={s} index={i} onSaved={load}/>
+          {stepDurationSeconds(s)!==null?<>
+            <div className="workout-time-panel" aria-label={"Duración programada: "+formatStepDuration(s)}>
+              <Clock3 size={21} aria-hidden="true"/>
+              <span>Duración programada</span>
+              <strong>{formatStepDuration(s)}</strong>
+            </div>
+            {typeof s.effort_rpe==="string"&&<p className="workout-effort-note">Esfuerzo previsto: {s.effort_rpe}</p>}
+          </>:<>
+            <div className="workout-numbers"><div><span>Series</span><strong>{value(s.sets??s.series)}</strong></div><div><span>Reps</span><strong>{value(s.reps)}</strong></div><div><span>Carga</span><strong>{loadDisplay(s).label}</strong></div><div><span>Descanso</span><strong>{value(s.rest_seconds??s.rest)}</strong></div></div>
+            <ExerciseLoad key={p.id+"-"+i+"-"+p.version} plan={p} step={s} index={i} onSaved={load}/>
+          </>}
           <div className="guide-grid"><div><h4><CheckCircle2 size={17}/> Cómo hacerlo</h4><p>{value(s.instructions??s.technique)}</p></div><div><h4 className="warning"><AlertTriangle size={17}/> Errores frecuentes</h4><p>{value(s.mistakes)}</p></div></div>
           <div className="safety"><ShieldCheck size={17}/> {value(s.safety??"Precauciones técnicas aún no registradas para este movimiento.")}</div>
 

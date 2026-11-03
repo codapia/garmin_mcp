@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CalendarDays, Dumbbell, Pencil, Save, X } from "lucide-react";
 import { longDate, shortDate } from "./fitness-insights";
 import type { GarminActivity } from "./workout-reconciliation";
+import { timedStepBreakdown } from "./workout-duration";
 
 export type WorkoutPlan={
   id:string;date:string;title:string;steps:Record<string,unknown>[];
@@ -46,6 +47,9 @@ export function WorkoutWeekGrid({plans,activities,dates,selectedDate,onSelectDay
   ];
   function kind(plan:WorkoutPlan){
     const sport=plan.steps.map(s=>text(s.source_garmin_sport)).join(" ").toLowerCase();
+    // A mixed full-body plan often includes a bike warmup and cooldown.
+    // Keep it in the strength row when it contains strength sets/reps.
+    if(plan.steps.some(s=>Number(s.sets)>0&&Number(s.reps)>0))return "strength";
     if(/cycling|running|cardio|swimming/.test(sport)||/bici|cardio|ciclismo/i.test(plan.title))return "cardio";
     if(sport.includes("strength")||plan.steps.some(s=>Boolean(s.category||s.source_garmin_category)))return "strength";
     return "other";
@@ -84,6 +88,7 @@ export function WorkoutWeekGrid({plans,activities,dates,selectedDate,onSelectDay
                 onClick={()=>onSelectDay(d)} aria-label={"Plan pendiente: "+plan.title}>
                 <strong>{plan.title.replace(/^Importada de Garmin\s*·\s*/,"")}</strong>
                 <span>Programado · no realizado</span>
+                {timedStepBreakdown(plan.steps)&&<span>{timedStepBreakdown(plan.steps)}</span>}
               </button>)}
               {!completed.length&&!scheduled.length&&<span className="week-cell-empty">—</span>}
             </div>;

@@ -214,3 +214,11 @@ h1,h2,h3,h4,p{margin-top:0}p{line-height:1.6}.app-shell{min-height:100vh;display
 /* Confirmed Garmin activities and pending plans must never look identical. */
 .workout-week-entry.planned{border-style:dashed;border-color:#64715d;background:#253124;color:#d4e2ca}
 .workout-week-entry.planned span{color:#d8c39a}
+
+/* Timed segments: show scheduled minutes instead of irrelevant strength fields. */
+.workout-time-panel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:17px 18px;background:#263323;border:1px solid #536a3e;border-radius:13px}
+.workout-time-panel svg{color:var(--lime);flex-shrink:0}
+.workout-time-panel span{font-size:13px;font-weight:650;color:#d4e3cb}
+.workout-time-panel strong{margin-left:auto;font-size:23px;line-height:1.2;font-weight:850;font-variant-numeric:tabular-nums;color:var(--lime);white-space:nowrap}
+.workout-effort-note{margin:0;font-size:13px;color:#b7c6af}
+@media(max-width:500px){.workout-time-panel{padding:14px;gap:9px}.workout-time-panel strong{font-size:21px}}
